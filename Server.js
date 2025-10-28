@@ -2,191 +2,103 @@ const express = require('express');
 const http = require('http');
 const socketIo = require('socket.io');
 const cors = require('cors');
-const path = require('path');
+const { createClient } = require('@supabase/supabase-js');
 
 const app = express();
 const server = http.createServer(app);
-
 const io = socketIo(server, {
   cors: {
     origin: "*",
     methods: ["GET", "POST"]
-  },
-  pingTimeout: 60000,
-  pingInterval: 25000
+  }
 });
 
 app.use(cors());
 app.use(express.json());
+app.use(express.static('public'));
 
-// Правильное обслуживание статических файлов для pkg
-app.use(express.static(path.join(__dirname, 'public')));
+// Supabase configuration
+const supabaseUrl = process.env.SUPABASE_URL;
+const supabaseKey = process.env.SUPABASE_KEY;
+const supabase = createClient(supabaseUrl, supabaseKey);
 
-app.get('/', function(req, res) {
-  res.sendFile(path.join(__dirname, 'public', 'index.html'));
-});
-
-// Хранилище в памяти
-const activeUsers = new Map();
-const messages = [];
-const MAX_MESSAGES = 1000;
-
-// Демо пользователи
-const demoUsers = [
-  { id: 1, username: 'testuser', password: '123456', avatar: '🦊' },
-  { id: 2, username: 'alice', password: '123456', avatar: '🐰' },
-  { id: 3, username: 'bob', password: '123456', avatar: '🐻' }
-];
-
-// API Routes
-app.post('/api/register', function(req, res) {
-  const username = req.body.username;
-  const password = req.body.password;
-  
-  if (!username || !password) {
-    return res.status(400).json({ error: 'Username and password required' });
-  }
-
-  // Проверяем, нет ли уже такого пользователя
-  const existingUser = demoUsers.find(function(u) { return u.username === username; });
-  if (existingUser) {
-    return res.status(400).json({ error: 'Username already exists' });
-  }
-
-  // Создаем нового пользователя
-  const newUser = {
-    id: demoUsers.length + 1,
-    username: username,
-    password: password,
-    avatar: '👤'
-  };
-  
-  demoUsers.push(newUser);
-  
-  res.json({ 
-    success: true, 
-    user: {
-      id: newUser.id,
-      username: newUser.username,
-      avatar: newUser.avatar
-    }
-  });
-});
-
-app.post('/api/login', function(req, res) {
-  const username = req.body.username;
-  const password = req.body.password;
-  
-  if (!username || !password) {
-    return res.status(400).json({ error: 'Username and password required' });
-  }
-
-  // Ищем пользователя
-  const user = demoUsers.find(function(u) { 
-    return u.username === username && u.password === password; 
-  });
-  
-  if (!user) {
-    return res.status(400).json({ error: 'Invalid credentials' });
-  }
-
-  res.json({
-    success: true,
-    user: {
-      id: user.id,
-      username: user.username,
-      avatar: user.avatar,
-      status: 'online'
-    }
-  });
-});
-
-// Socket.io обработчики
-io.on('connection', function(socket) {
-  console.log('Новое подключение:', socket.id);
-
-  socket.on('user_authenticated', function(userData) {
-    const user = {
-      id: userData.id,
-      username: userData.username,
-      avatar: userData.avatar,
-      socketId: socket.id,
-      status: 'online'
-    };
-
-    activeUsers.set(socket.id, user);
-    
-    // Отправляем историю сообщений
-    socket.emit('message_history', messages);
-    
-    // Уведомляем всех о новом пользователе
-    socket.broadcast.emit('user_joined', {
-      username: user.username,
-      avatar: user.avatar,
-      message: user.username + ' присоединился к чату',
-      timestamp: new Date()
-    });
-    
-    updateOnlineUsers();
-  });
-
-  socket.on('send_message', function(data) {
-    const user = activeUsers.get(socket.id);
-    if (user && data.content && data.content.trim()) {
-      const message = {
-        id: Date.now().toString(),
-        user_id: user.id,
-        username: user.username,
-        avatar: user.avatar,
-        content: data.content.trim(),
-        created_at: new Date()
-      };
-      
-      // Сохраняем сообщение
-      messages.push(message);
-      
-      // Ограничиваем количество сообщений в памяти
-      if (messages.length > MAX_MESSAGES) {
-        messages.shift(); // Удаляем самое старое сообщение
+// Create messages table in Supabase first
+async function initializeDatabase() {
+  const { error } = await supabase
+    .from('messages')
+    .insert([
+      { 
+        content: 'Система: Чат инициализирован!', 
+        username: 'system',
+        created_at: new Date().toISOString()
       }
-      
-      io.emit('new_message', message);
-    }
-  });
-
-  socket.on('disconnect', function() {
-    const user = activeUsers.get(socket.id);
-    if (user) {
-      activeUsers.delete(socket.id);
-      
-      socket.broadcast.emit('user_left', {
-        username: user.username,
-        avatar: user.avatar,
-        message: user.username + ' покинул чат',
-        timestamp: new Date()
-      });
-      
-      updateOnlineUsers();
-    }
-  });
-
-  function updateOnlineUsers() {
-    const onlineUsers = Array.from(activeUsers.values()).map(function(user) {
-      return {
-        id: user.id,
-        username: user.username,
-        avatar: user.avatar,
-        status: user.status
-      };
-    });
+    ])
+    .select();
     
-    io.emit('online_users', onlineUsers);
+  if (error && error.code !== '42P01') {
+    console.log('База данных готова');
   }
+}
+
+// Socket.io connection handling
+io.on('connection', (socket) => {
+  console.log('Пользователь подключен:', socket.id);
+
+  // Send message history to new client
+  socket.on('get_history', async () => {
+    try {
+      const { data: messages, error } = await supabase
+        .from('messages')
+        .select('*')
+        .order('created_at', { ascending: true })
+        .limit(100);
+
+      if (!error && messages) {
+        socket.emit('message_history', messages);
+      }
+    } catch (error) {
+      console.error('Ошибка получения истории:', error);
+    }
+  });
+
+  // Handle new message
+  socket.on('send_message', async (data) => {
+    try {
+      const { username, content } = data;
+      
+      if (!username || !content) return;
+
+      // Save to Supabase
+      const { data: newMessage, error } = await supabase
+        .from('messages')
+        .insert([
+          { 
+            username: username.trim(), 
+            content: content.trim(),
+            created_at: new Date().toISOString()
+          }
+        ])
+        .select()
+        .single();
+
+      if (!error && newMessage) {
+        // Broadcast to all clients
+        io.emit('new_message', newMessage);
+      }
+    } catch (error) {
+      console.error('Ошибка сохранения сообщения:', error);
+    }
+  });
+
+  socket.on('disconnect', () => {
+    console.log('Пользователь отключен:', socket.id);
+  });
 });
 
 const PORT = process.env.PORT || 3000;
-server.listen(PORT, function() {
-  console.log('💬 NeoConnect сервер запущен на порту ' + PORT);
-  console.log('👥 Демо пользователи: testuser/123456, alice/123456, bob/123456');
-  console.log('🌐 Откройте: http://localhost:' + PORT);
+
+initializeDatabase().then(() => {
+  server.listen(PORT, () => {
+    console.log(`Сервер запущен на порту ${PORT}`);
+  });
 });
