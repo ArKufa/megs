@@ -18,9 +18,11 @@ const io = socketIo(server, {
 
 app.use(cors());
 app.use(express.json());
+
+// Правильное обслуживание статических файлов для pkg
 app.use(express.static(path.join(__dirname, 'public')));
 
-app.get('/', (req, res) => {
+app.get('/', function(req, res) {
   res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
@@ -29,7 +31,7 @@ const activeUsers = new Map();
 const messages = [];
 const MAX_MESSAGES = 1000;
 
-// Простые пользователи для демо (в реальном приложении убрать)
+// Демо пользователи
 const demoUsers = [
   { id: 1, username: 'testuser', password: '123456', avatar: '🦊' },
   { id: 2, username: 'alice', password: '123456', avatar: '🐰' },
@@ -37,15 +39,16 @@ const demoUsers = [
 ];
 
 // API Routes
-app.post('/api/register', async (req, res) => {
-  const { username, password } = req.body;
+app.post('/api/register', function(req, res) {
+  const username = req.body.username;
+  const password = req.body.password;
   
   if (!username || !password) {
     return res.status(400).json({ error: 'Username and password required' });
   }
 
   // Проверяем, нет ли уже такого пользователя
-  const existingUser = demoUsers.find(u => u.username === username);
+  const existingUser = demoUsers.find(function(u) { return u.username === username; });
   if (existingUser) {
     return res.status(400).json({ error: 'Username already exists' });
   }
@@ -70,15 +73,18 @@ app.post('/api/register', async (req, res) => {
   });
 });
 
-app.post('/api/login', async (req, res) => {
-  const { username, password } = req.body;
+app.post('/api/login', function(req, res) {
+  const username = req.body.username;
+  const password = req.body.password;
   
   if (!username || !password) {
     return res.status(400).json({ error: 'Username and password required' });
   }
 
   // Ищем пользователя
-  const user = demoUsers.find(u => u.username === username && u.password === password);
+  const user = demoUsers.find(function(u) { 
+    return u.username === username && u.password === password; 
+  });
   
   if (!user) {
     return res.status(400).json({ error: 'Invalid credentials' });
@@ -96,10 +102,10 @@ app.post('/api/login', async (req, res) => {
 });
 
 // Socket.io обработчики
-io.on('connection', (socket) => {
+io.on('connection', function(socket) {
   console.log('Новое подключение:', socket.id);
 
-  socket.on('user_authenticated', (userData) => {
+  socket.on('user_authenticated', function(userData) {
     const user = {
       id: userData.id,
       username: userData.username,
@@ -117,16 +123,16 @@ io.on('connection', (socket) => {
     socket.broadcast.emit('user_joined', {
       username: user.username,
       avatar: user.avatar,
-      message: `${user.username} присоединился к чату`,
+      message: user.username + ' присоединился к чату',
       timestamp: new Date()
     });
     
     updateOnlineUsers();
   });
 
-  socket.on('send_message', (data) => {
+  socket.on('send_message', function(data) {
     const user = activeUsers.get(socket.id);
-    if (user && data.content.trim()) {
+    if (user && data.content && data.content.trim()) {
       const message = {
         id: Date.now().toString(),
         user_id: user.id,
@@ -148,7 +154,7 @@ io.on('connection', (socket) => {
     }
   });
 
-  socket.on('disconnect', () => {
+  socket.on('disconnect', function() {
     const user = activeUsers.get(socket.id);
     if (user) {
       activeUsers.delete(socket.id);
@@ -156,7 +162,7 @@ io.on('connection', (socket) => {
       socket.broadcast.emit('user_left', {
         username: user.username,
         avatar: user.avatar,
-        message: `${user.username} покинул чат`,
+        message: user.username + ' покинул чат',
         timestamp: new Date()
       });
       
@@ -165,19 +171,22 @@ io.on('connection', (socket) => {
   });
 
   function updateOnlineUsers() {
-    const onlineUsers = Array.from(activeUsers.values()).map(user => ({
-      id: user.id,
-      username: user.username,
-      avatar: user.avatar,
-      status: user.status
-    }));
+    const onlineUsers = Array.from(activeUsers.values()).map(function(user) {
+      return {
+        id: user.id,
+        username: user.username,
+        avatar: user.avatar,
+        status: user.status
+      };
+    });
     
     io.emit('online_users', onlineUsers);
   }
 });
 
 const PORT = process.env.PORT || 3000;
-server.listen(PORT, () => {
-  console.log(`💬 Сервер запущен на порту ${PORT}`);
-  console.log(`👥 Демо пользователи: testuser/123456, alice/123456, bob/123456`);
+server.listen(PORT, function() {
+  console.log('💬 NeoConnect сервер запущен на порту ' + PORT);
+  console.log('👥 Демо пользователи: testuser/123456, alice/123456, bob/123456');
+  console.log('🌐 Откройте: http://localhost:' + PORT);
 });
