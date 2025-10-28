@@ -265,7 +265,7 @@
 
             connectToServer() {
                 // Замените URL на ваш хостинг
-                const serverUrl = 'https://your-app-name.herokuapp.com'; // или другой хостинг
+                this.socket = io();
                 this.socket = io(serverUrl);
 
                 this.socket.on('connect', () => {
