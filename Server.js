@@ -7,7 +7,6 @@ const path = require('path');
 const app = express();
 const server = http.createServer(app);
 
-// Настройка Socket.io с улучшенными параметрами
 const io = socketIo(server, {
   cors: {
     origin: "*",
@@ -17,12 +16,10 @@ const io = socketIo(server, {
   pingInterval: 25000
 });
 
-// Middleware
 app.use(cors());
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
 
-// Маршруты
 app.get('/', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
@@ -33,6 +30,8 @@ class MessageStore {
     this.messages = [];
     this.users = new Map();
     this.maxMessages = 200;
+    this.missions = [];
+    this.activeCalls = new Map();
   }
 
   addMessage(message) {
@@ -47,12 +46,24 @@ class MessageStore {
     this.users.set(socketId, {
       ...userData,
       joinTime: new Date(),
-      lastActive: new Date()
+      lastActive: new Date(),
+      status: 'online',
+      isInCall: false
     });
   }
 
   removeUser(socketId) {
     const user = this.users.get(socketId);
+    
+    // Завершаем активные звонки пользователя
+    if (this.activeCalls.has(socketId)) {
+      const callData = this.activeCalls.get(socketId);
+      this.activeCalls.delete(socketId);
+      if (callData.targetSocketId && this.users.has(callData.targetSocketId)) {
+        this.activeCalls.delete(callData.targetSocketId);
+      }
+    }
+    
     this.users.delete(socketId);
     return user;
   }
@@ -69,33 +80,106 @@ class MessageStore {
       id: user.id,
       username: user.username,
       codename: user.codename,
-      status: user.status
+      status: user.status,
+      isInCall: user.isInCall
     }));
+  }
+
+  // Управление звонками
+  startCall(callerSocketId, targetSocketId) {
+    const callData = {
+      callerSocketId,
+      targetSocketId,
+      startTime: new Date(),
+      status: 'ringing'
+    };
+    
+    this.activeCalls.set(callerSocketId, callData);
+    this.activeCalls.set(targetSocketId, callData);
+    
+    // Обновляем статусы пользователей
+    const caller = this.users.get(callerSocketId);
+    const target = this.users.get(targetSocketId);
+    if (caller) caller.isInCall = true;
+    if (target) target.isInCall = true;
+    
+    return callData;
+  }
+
+  endCall(socketId) {
+    const callData = this.activeCalls.get(socketId);
+    if (!callData) return null;
+
+    const { callerSocketId, targetSocketId } = callData;
+    
+    // Обновляем статусы пользователей
+    const caller = this.users.get(callerSocketId);
+    const target = this.users.get(targetSocketId);
+    if (caller) caller.isInCall = false;
+    if (target) target.isInCall = false;
+    
+    this.activeCalls.delete(callerSocketId);
+    this.activeCalls.delete(targetSocketId);
+    
+    return callData;
+  }
+
+  // Управление заданиями
+  addMission(mission) {
+    this.missions.push({
+      ...mission,
+      id: Date.now().toString(),
+      createdAt: new Date(),
+      status: 'active'
+    });
+  }
+
+  completeMission(missionId) {
+    const mission = this.missions.find(m => m.id === missionId);
+    if (mission) {
+      mission.status = 'completed';
+      mission.completedAt = new Date();
+    }
+    return mission;
   }
 }
 
 const store = new MessageStore();
 
+// Пример заданий
+store.addMission({
+  title: 'Защита периметра',
+  description: 'Обеспечить безопасность восточного сектора',
+  priority: 'high',
+  assignedTo: []
+});
+
+store.addMission({
+  title: 'Сбор информации',
+  description: 'Собрать данные о подозрительной активности',
+  priority: 'medium',
+  assignedTo: []
+});
+
 // Socket.io обработчики
 io.on('connection', (socket) => {
-  console.log('Новое подключение:', socket.id);
+  console.log('Новый агент подключен:', socket.id);
 
-  // Новый пользователь
   socket.on('user_join', (userData) => {
     const user = {
       id: socket.id,
       username: userData.username,
       codename: userData.codename || 'Агент',
-      status: 'В сети',
-      joinTime: new Date()
+      status: 'online',
+      joinTime: new Date(),
+      isInCall: false
     };
 
     store.addUser(socket.id, user);
     
-    // Отправляем историю сообщений
     socket.emit('message_history', store.messages);
+    socket.emit('missions_update', store.missions);
     
-    // Уведомляем всех о новом агенте
     socket.broadcast.emit('agent_joined', {
       username: user.username,
       codename: user.codename,
@@ -103,11 +187,10 @@ io.on('connection', (socket) => {
       timestamp: new Date()
     });
     
-    // Обновляем список агентов
     updateOnlineAgents();
   });
 
-  // Отправка сообщения
+  // Сообщения
   socket.on('send_message', (data) => {
     const user = store.users.get(socket.id);
     if (user && data.text.trim()) {
@@ -126,28 +209,101 @@ io.on('connection', (socket) => {
     }
   });
 
-  // Системное сообщение
-  socket.on('send_system_message', (data) => {
-    const message = {
-      id: Date.now().toString(),
-      username: 'СИСТЕМА',
-      codename: 'СИСТЕМА',
-      text: data.text,
-      timestamp: new Date(),
-      type: 'system',
-      color: '#ff4444'
-    };
+  // Звонки
+  socket.on('call_user', (data) => {
+    const caller = store.users.get(socket.id);
+    const targetUser = Array.from(store.users.values()).find(u => u.codename === data.targetCodename);
     
-    const savedMessage = store.addMessage(message);
-    io.emit('new_message', savedMessage);
+    if (caller && targetUser && !targetUser.isInCall) {
+      const callData = store.startCall(socket.id, targetUser.id);
+      
+      // Уведомляем вызываемого
+      io.to(targetUser.id).emit('incoming_call', {
+        callerCodename: caller.codename,
+        callerUsername: caller.username,
+        callId: callData.startTime.getTime()
+      });
+      
+      socket.emit('call_initiated', {
+        targetCodename: targetUser.codename,
+        status: 'ringing'
+      });
+    } else {
+      socket.emit('call_failed', {
+        reason: targetUser ? 'Агент занят' : 'Агент не найден'
+      });
+    }
   });
 
-  // Обновление активности
-  socket.on('user_activity', () => {
-    store.updateUserActivity(socket.id);
+  socket.on('accept_call', (data) => {
+    const user = store.users.get(socket.id);
+    if (user) {
+      const callData = store.activeCalls.get(socket.id);
+      if (callData && callData.status === 'ringing') {
+        callData.status = 'active';
+        
+        // Уведомляем обоих пользователей
+        io.to(callData.callerSocketId).emit('call_accepted', {
+          targetCodename: user.codename
+        });
+        
+        io.to(callData.callerSocketId).to(socket.id).emit('call_connected', {
+          callId: callData.startTime.getTime()
+        });
+      }
+    }
   });
 
-  // Отключение
+  socket.on('reject_call', (data) => {
+    const user = store.users.get(socket.id);
+    if (user) {
+      const endedCall = store.endCall(socket.id);
+      if (endedCall) {
+        io.to(endedCall.callerSocketId).emit('call_rejected', {
+          targetCodename: user.codename
+        });
+      }
+    }
+  });
+
+  socket.on('end_call', (data) => {
+    const endedCall = store.endCall(socket.id);
+    if (endedCall) {
+      const otherSocketId = endedCall.callerSocketId === socket.id ? 
+                           endedCall.targetSocketId : endedCall.callerSocketId;
+      
+      io.to(otherSocketId).emit('call_ended', {
+        reason: 'Собеседник завершил звонок'
+      });
+    }
+  });
+
+  // Задания
+  socket.on('assign_mission', (data) => {
+    const mission = store.missions.find(m => m.id === data.missionId);
+    if (mission) {
+      if (!mission.assignedTo.includes(data.codename)) {
+        mission.assignedTo.push(data.codename);
+        io.emit('missions_update', store.missions);
+      }
+    }
+  });
+
+  socket.on('complete_mission', (data) => {
+    const mission = store.completeMission(data.missionId);
+    if (mission) {
+      io.emit('missions_update', store.missions);
+      io.emit('new_message', {
+        id: Date.now().toString(),
+        username: 'СИСТЕМА',
+        codename: 'СИСТЕМА',
+        text: `Задание "${mission.title}" выполнено агентом ${data.codename}`,
+        timestamp: new Date(),
+        type: 'system'
+      });
+    }
+  });
+
   socket.on('disconnect', (reason) => {
     const user = store.removeUser(socket.id);
     if (user) {
@@ -161,12 +317,6 @@ io.on('connection', (socket) => {
       
       updateOnlineAgents();
     }
-    console.log('Агент отключен:', socket.id, reason);
-  });
-
-  // Ошибка соединения
-  socket.on('connect_error', (error) => {
-    console.log('Ошибка подключения:', error);
   });
 });
 
@@ -181,6 +331,8 @@ app.get('/status', (req, res) => {
     status: 'active',
     agentsOnline: store.users.size,
     totalMessages: store.messages.length,
+    activeMissions: store.missions.filter(m => m.status === 'active').length,
+    activeCalls: store.activeCalls.size / 2,
     serverTime: new Date()
   });
 });
