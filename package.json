@@ -1,20 +1,17 @@
 {
-  "name": "discord-like-chat",
+  "name": "discord-chat-simple",
   "version": "1.0.0",
-  "description": "Discord-like chat with SQLite database",
+  "description": "Discord-like chat without database",
   "main": "server.js",
   "scripts": {
-    "start": "node server.js",
-    "build": "pkg server.js --target node16-win-x64 --output discord-chat.exe"
+    "start": "node server.js"
   },
   "dependencies": {
     "express": "^4.18.2",
     "socket.io": "^4.5.0",
-    "cors": "^2.8.5",
-    "sqlite3": "^5.1.6",
-    "bcryptjs": "^2.4.3"
+    "cors": "^2.8.5"
   },
-  "devDependencies": {
-    "pkg": "^5.8.1"
+  "engines": {
+    "node": ">=16.0.0"
   }
 }
