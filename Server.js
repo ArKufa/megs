@@ -8,248 +8,455 @@ const path = require('path');
 const app = express();
 const server = http.createServer(app);
 
-// Получаем URL приложения на Render
-const RENDER_URL = process.env.RENDER_EXTERNAL_URL || `http://localhost:${process.env.PORT || 3000}`;
+// Конфигурация
+const supabaseUrl = process.env.SUPABASE_URL;
+const supabaseKey = process.env.SUPABASE_KEY;
+const supabase = createClient(supabaseUrl, supabaseKey);
 
-console.log('🌐 URL приложения:', RENDER_URL);
-
-// Настройка Socket.io с правильным CORS
 const io = socketIo(server, {
-  cors: {
-    origin: "*", // Разрешаем все домены для тестирования
-    methods: ["GET", "POST"],
-    credentials: true
-  },
-  transports: ['websocket', 'polling']
+  cors: { origin: "*", methods: ["GET", "POST"] }
 });
 
-// Middleware
-app.use(cors({
-  origin: "*",
-  credentials: true
-}));
+app.use(cors());
 app.use(express.json());
 app.use(express.static('public'));
 
-// Проверка переменных окружения
-const supabaseUrl = process.env.SUPABASE_URL;
-const supabaseKey = process.env.SUPABASE_KEY;
+// Хранилище в памяти (для онлайн пользователей, сессий и т.д.)
+const onlineUsers = new Map();
+const userSessions = new Map();
+const typingUsers = new Map();
+const chatMessages = new Map(); // Кэш сообщений по чатам
 
-console.log('🔧 Проверка конфигурации Supabase...');
-console.log('SUPABASE_URL:', supabaseUrl ? '✅ Установлен' : '❌ Отсутствует');
-console.log('SUPABASE_KEY:', supabaseKey ? '✅ Установлен' : '❌ Отсутствует');
+// Функция для создания таблиц если не существуют
+async function initializeDatabase() {
+  // Таблица пользователей
+  const { error: usersError } = await supabase
+    .from('users')
+    .select('*')
+    .limit(1);
 
-if (!supabaseUrl || !supabaseKey) {
-  console.error('❌ ОШИБКА: Отсутствуют переменные окружения Supabase');
-  process.exit(1);
-}
+  if (usersError && usersError.code === '42P01') {
+    await supabase.rpc('create_users_table');
+  }
 
-// Инициализация Supabase
-const supabase = createClient(supabaseUrl, supabaseKey);
-console.log('✅ Supabase клиент инициализирован');
+  // Таблица сообщений
+  const { error: messagesError } = await supabase
+    .from('messages')
+    .select('*')
+    .limit(1);
 
-// Проверка подключения к базе данных
-async function testSupabaseConnection() {
-  try {
-    console.log('🔄 Проверка подключения к базе данных...');
-    const { data, error } = await supabase
-      .from('messages')
-      .select('*')
-      .limit(1);
-    
-    if (error) {
-      console.error('❌ Ошибка подключения к Supabase:', error.message);
-      return false;
-    }
-    
-    console.log('✅ Успешное подключение к Supabase');
-    return true;
-  } catch (error) {
-    console.error('❌ Непредвиденная ошибка:', error.message);
-    return false;
+  if (messagesError && messagesError.code === '42P01') {
+    await supabase.rpc('create_messages_table');
+  }
+
+  // Таблица чатов
+  const { error: chatsError } = await supabase
+    .from('chats')
+    .select('*')
+    .limit(1);
+
+  if (chatsError && chatsError.code === '42P01') {
+    await supabase.rpc('create_chats_table');
   }
 }
 
-// Создание таблицы если не существует
-async function initializeDatabase() {
-  try {
-    console.log('🔄 Инициализация базы данных...');
+// Telegram-подобные функции
+
+// 1. Отправка сообщений с статусом прочтения
+async function sendMessageWithStatus(data) {
+  const { username, content, chatId = 'general', replyTo = null } = data;
+  
+  const { data: message, error } = await supabase
+    .from('messages')
+    .insert([
+      {
+        username,
+        content,
+        chat_id: chatId,
+        reply_to: replyTo,
+        created_at: new Date().toISOString(),
+        status: 'sent'
+      }
+    ])
+    .select()
+    .single();
+
+  if (!error) {
+    // Отправляем сообщение всем в чате
+    io.to(chatId).emit('new_message', message);
     
-    // Просто проверяем подключение, не пытаемся создать таблицу
+    // Обновляем превью чата
+    io.emit('chat_update', {
+      chatId,
+      lastMessage: content,
+      lastMessageTime: message.created_at,
+      unreadCount: 0
+    });
+
+    return message;
+  }
+}
+
+// 2. Отметка сообщений как прочитанных
+async function markMessagesAsRead(userId, chatId, messageIds) {
+  const { error } = await supabase
+    .from('messages')
+    .update({ status: 'read' })
+    .in('id', messageIds)
+    .eq('chat_id', chatId);
+
+  if (!error) {
+    // Уведомляем отправителей о прочтении
+    messageIds.forEach(messageId => {
+      const message = chatMessages.get(messageId);
+      if (message) {
+        io.to(message.username).emit('message_read', {
+          messageId,
+          reader: userId
+        });
+      }
+    });
+  }
+}
+
+// 3. Функция редактирования сообщений
+async function editMessage(messageId, newContent, userId) {
+  const { data: message, error } = await supabase
+    .from('messages')
+    .update({ 
+      content: newContent,
+      edited_at: new Date().toISOString()
+    })
+    .eq('id', messageId)
+    .eq('username', userId)
+    .select()
+    .single();
+
+  if (!error) {
+    io.to(message.chat_id).emit('message_edited', message);
+  }
+}
+
+// 4. Удаление сообщений (для всех или только для себя)
+async function deleteMessage(messageId, userId, forEveryone = false) {
+  if (forEveryone) {
     const { error } = await supabase
       .from('messages')
-      .select('*')
-      .limit(1);
+      .delete()
+      .eq('id', messageId);
 
-    if (error && error.code === '42P01') {
-      console.log('📋 Таблица messages не существует');
-      console.log('ℹ️ Создайте таблицу вручную в Supabase:');
-      console.log(`
-        CREATE TABLE messages (
-          id BIGSERIAL PRIMARY KEY,
-          username TEXT NOT NULL,
-          content TEXT NOT NULL,
-          created_at TIMESTAMPTZ DEFAULT NOW()
-        );
-      `);
-    } else if (error) {
-      console.log('⚠️ Ошибка при проверке таблицы:', error.message);
-    } else {
-      console.log('✅ База данных готова');
+    if (!error) {
+      io.emit('message_deleted', { messageId, deletedFor: 'everyone' });
     }
-  } catch (error) {
-    console.error('❌ Ошибка инициализации:', error.message);
+  } else {
+    // Сохраняем в отдельной таблице скрытых сообщений
+    const { error } = await supabase
+      .from('deleted_messages')
+      .insert([{ message_id: messageId, user_id: userId }]);
+
+    if (!error) {
+      io.to(userId).emit('message_deleted', { messageId, deletedFor: 'me' });
+    }
   }
 }
 
-// Socket.io обработка подключений
-io.on('connection', (socket) => {
-  console.log('👤 Пользователь подключен:', socket.id);
+// 5. Ответ на сообщения (reply)
+async function sendReply(data) {
+  const { username, content, replyTo, chatId = 'general' } = data;
+  
+  const { data: originalMessage } = await supabase
+    .from('messages')
+    .select('*')
+    .eq('id', replyTo)
+    .single();
 
-  // Отправка истории сообщений новому клиенту
-  socket.on('get_history', async () => {
-    try {
-      console.log('📨 Запрос истории сообщений от', socket.id);
-      
-      const { data: messages, error } = await supabase
-        .from('messages')
-        .select('*')
-        .order('created_at', { ascending: true })
-        .limit(100);
+  if (originalMessage) {
+    const replyData = {
+      username,
+      content,
+      chat_id: chatId,
+      reply_to: replyTo,
+      created_at: new Date().toISOString(),
+      status: 'sent'
+    };
 
-      if (error) {
-        console.error('❌ Ошибка получения истории:', error.message);
-        socket.emit('error', 'Ошибка загрузки истории');
-        return;
-      }
-
-      console.log(`📊 Отправлено ${messages?.length || 0} сообщений`);
-      socket.emit('message_history', messages || []);
-    } catch (error) {
-      console.error('❌ Непредвиденная ошибка получения истории:', error.message);
-      socket.emit('error', 'Ошибка загрузки истории');
-    }
-  });
-
-  // Обработка нового сообщения
-  socket.on('send_message', async (data) => {
-    try {
-      const { username, content } = data;
-      
-      if (!username || !content) {
-        console.log('⚠️ Пустое сообщение или имя пользователя');
-        return;
-      }
-
-      console.log(`💬 Новое сообщение от ${username}: ${content.substring(0, 50)}...`);
-
-      // Сохранение в Supabase
-      const { data: newMessage, error } = await supabase
-        .from('messages')
-        .insert([
-          { 
-            username: username.trim(), 
-            content: content.trim(),
-            created_at: new Date().toISOString()
-          }
-        ])
-        .select()
-        .single();
-
-      if (error) {
-        console.error('❌ Ошибка сохранения сообщения:', error.message);
-        socket.emit('error', 'Ошибка отправки сообщения');
-        return;
-      }
-
-      console.log('✅ Сообщение сохранено в базе данных');
-      
-      // Отправка всем клиентам
-      io.emit('new_message', newMessage);
-      
-    } catch (error) {
-      console.error('❌ Непредвиденная ошибка отправки сообщения:', error.message);
-      socket.emit('error', 'Ошибка отправки сообщения');
-    }
-  });
-
-  socket.on('disconnect', (reason) => {
-    console.log('👤 Пользователь отключен:', socket.id, 'Причина:', reason);
-  });
-});
-
-// Health check endpoint
-app.get('/health', async (req, res) => {
-  const dbConnected = await testSupabaseConnection();
-  res.json({ 
-    status: dbConnected ? 'healthy' : 'degraded',
-    database: dbConnected ? 'connected' : 'disconnected',
-    timestamp: new Date().toISOString(),
-    service: 'browser-messenger',
-    url: RENDER_URL
-  });
-});
-
-// Main route
-app.get('/', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'index.html'));
-});
-
-// API для тестирования
-app.get('/api/test', async (req, res) => {
-  try {
-    const { data, error } = await supabase
+    const { data: message, error } = await supabase
       .from('messages')
-      .select('*')
-      .limit(5);
+      .insert([replyData])
+      .select()
+      .single();
 
-    if (error) throw error;
-
-    res.json({
-      status: 'success',
-      message: 'API работает корректно',
-      data: data,
-      count: data?.length || 0
-    });
-  } catch (error) {
-    res.status(500).json({
-      status: 'error',
-      message: error.message
-    });
+    if (!error) {
+      // Добавляем информацию об оригинальном сообщении
+      message.reply_to_message = originalMessage;
+      io.to(chatId).emit('new_message', message);
+    }
   }
+}
+
+// 6. Индикатор набора сообщения
+function handleTyping(userId, chatId) {
+  typingUsers.set(userId, {
+    chatId,
+    lastTyping: Date.now()
+  });
+
+  io.to(chatId).emit('user_typing', {
+    username: onlineUsers.get(userId)?.username,
+    userId
+  });
+
+  // Автоматически останавливаем индикатор через 3 секунды
+  setTimeout(() => {
+    const typingData = typingUsers.get(userId);
+    if (typingData && Date.now() - typingData.lastTyping > 2500) {
+      typingUsers.delete(userId);
+      io.to(chatId).emit('user_stop_typing', { userId });
+    }
+  }, 3000);
+}
+
+// 7. Функция пересылки сообщений
+async function forwardMessage(messageId, targetChatId, userId) {
+  const { data: originalMessage } = await supabase
+    .from('messages')
+    .select('*')
+    .eq('id', messageId)
+    .single();
+
+  if (originalMessage) {
+    const forwardData = {
+      username: onlineUsers.get(userId)?.username,
+      content: `Переслано: ${originalMessage.content}`,
+      chat_id: targetChatId,
+      forward_from: originalMessage.username,
+      forward_from_message_id: messageId,
+      created_at: new Date().toISOString(),
+      status: 'sent'
+    };
+
+    const { data: message, error } = await supabase
+      .from('messages')
+      .insert([forwardData])
+      .select()
+      .single();
+
+    if (!error) {
+      io.to(targetChatId).emit('new_message', message);
+    }
+  }
+}
+
+// 8. Система сессий и онлайн статусов
+function updateUserOnlineStatus(userId, username, isOnline = true) {
+  if (isOnline) {
+    onlineUsers.set(userId, {
+      username,
+      lastSeen: new Date().toISOString(),
+      isOnline: true
+    });
+  } else {
+    const user = onlineUsers.get(userId);
+    if (user) {
+      user.isOnline = false;
+      user.lastSeen = new Date().toISOString();
+    }
+  }
+
+  // Рассылаем обновление статуса
+  io.emit('users_update', Array.from(onlineUsers.values()));
+}
+
+// 9. Поиск по сообщениям
+async function searchMessages(query, chatId = null) {
+  let searchQuery = supabase
+    .from('messages')
+    .select('*')
+    .ilike('content', `%${query}%`)
+    .order('created_at', { ascending: false })
+    .limit(50);
+
+  if (chatId) {
+    searchQuery = searchQuery.eq('chat_id', chatId);
+  }
+
+  const { data: messages, error } = await searchQuery;
+
+  if (!error) {
+    return messages;
+  }
+  return [];
+}
+
+// 10. Получение истории сообщений с пагинацией
+async function getMessagesWithPagination(chatId, page = 1, limit = 50) {
+  const from = (page - 1) * limit;
+  
+  const { data: messages, error } = await supabase
+    .from('messages')
+    .select('*')
+    .eq('chat_id', chatId)
+    .order('created_at', { ascending: false })
+    .range(from, from + limit - 1);
+
+  if (!error) {
+    return messages.reverse(); // Возвращаем в правильном порядке
+  }
+  return [];
+}
+
+// Socket.io обработчики
+io.on('connection', (socket) => {
+  console.log('👤 Подключен пользователь:', socket.id);
+
+  // Регистрация пользователя
+  socket.on('user_join', async (username) => {
+    const userId = socket.id;
+    onlineUsers.set(userId, {
+      username,
+      lastSeen: new Date().toISOString(),
+      isOnline: true
+    });
+
+    socket.userId = userId;
+    socket.username = username;
+
+    // Присоединяем к общему чату
+    socket.join('general');
+
+    // Отправляем обновленный список пользователей
+    io.emit('users_update', Array.from(onlineUsers.values()));
+
+    // Системное сообщение о входе
+    const systemMessage = {
+      username: 'system',
+      content: `${username} присоединился к чату`,
+      chat_id: 'general',
+      created_at: new Date().toISOString(),
+      type: 'system'
+    };
+
+    io.to('general').emit('new_message', systemMessage);
+  });
+
+  // Получение истории сообщений
+  socket.on('get_history', async (data = {}) => {
+    const { chatId = 'general', page = 1 } = data;
+    const messages = await getMessagesWithPagination(chatId, page);
+    socket.emit('message_history', messages);
+  });
+
+  // Отправка сообщения
+  socket.on('send_message', async (data) => {
+    const message = await sendMessageWithStatus({
+      ...data,
+      chatId: data.chatId || 'general'
+    });
+  });
+
+  // Ответ на сообщение
+  socket.on('send_reply', async (data) => {
+    await sendReply(data);
+  });
+
+  // Редактирование сообщения
+  socket.on('edit_message', async (data) => {
+    await editMessage(data.messageId, data.newContent, socket.username);
+  });
+
+  // Удаление сообщения
+  socket.on('delete_message', async (data) => {
+    await deleteMessage(data.messageId, socket.username, data.forEveryone);
+  });
+
+  // Пересылка сообщения
+  socket.on('forward_message', async (data) => {
+    await forwardMessage(data.messageId, data.targetChatId, socket.userId);
+  });
+
+  // Индикатор набора
+  socket.on('typing', (data) => {
+    handleTyping(socket.userId, data.chatId || 'general');
+  });
+
+  socket.on('stop_typing', () => {
+    typingUsers.delete(socket.userId);
+    io.emit('user_stop_typing', { userId: socket.userId });
+  });
+
+  // Отметка сообщений как прочитанных
+  socket.on('mark_as_read', async (data) => {
+    await markMessagesAsRead(socket.userId, data.chatId, data.messageIds);
+  });
+
+  // Поиск сообщений
+  socket.on('search_messages', async (data) => {
+    const results = await searchMessages(data.query, data.chatId);
+    socket.emit('search_results', results);
+  });
+
+  // Получение онлайн статусов
+  socket.on('get_online_status', (userIds) => {
+    const statuses = {};
+    userIds.forEach(userId => {
+      const user = onlineUsers.get(userId);
+      statuses[userId] = user ? {
+        isOnline: user.isOnline,
+        lastSeen: user.lastSeen
+      } : null;
+    });
+    socket.emit('online_statuses', statuses);
+  });
+
+  // Отключение пользователя
+  socket.on('disconnect', () => {
+    const userId = socket.userId;
+    if (userId) {
+      updateUserOnlineStatus(userId, socket.username, false);
+      
+      // Системное сообщение о выходе
+      const systemMessage = {
+        username: 'system',
+        content: `${socket.username} покинул чат`,
+        chat_id: 'general',
+        created_at: new Date().toISOString(),
+        type: 'system'
+      };
+
+      io.to('general').emit('new_message', systemMessage);
+    }
+    console.log('👤 Отключен пользователь:', socket.id);
+  });
+});
+
+// API маршруты
+app.get('/api/messages/search', async (req, res) => {
+  const { q, chat_id } = req.query;
+  const results = await searchMessages(q, chat_id);
+  res.json(results);
+});
+
+app.get('/api/users/online', (req, res) => {
+  res.json(Array.from(onlineUsers.values()));
+});
+
+app.get('/health', async (req, res) => {
+  const { data, error } = await supabase
+    .from('messages')
+    .select('*')
+    .limit(1);
+
+  res.json({
+    status: error ? 'degraded' : 'healthy',
+    database: error ? 'disconnected' : 'connected',
+    onlineUsers: onlineUsers.size,
+    timestamp: new Date().toISOString()
+  });
 });
 
 const PORT = process.env.PORT || 3000;
 
-// Запуск сервера
-async function startServer() {
-  console.log('🚀 Запуск сервера Messenger...');
-  
-  // Тестируем подключение к базе данных
-  const dbConnected = await testSupabaseConnection();
-  
-  if (!dbConnected) {
-    console.log('⚠️ Предупреждение: проблемы с подключением к базе данных');
-  }
-  
+server.listen(PORT, async () => {
+  console.log(`🚀 Сервер запущен на порту ${PORT}`);
   await initializeDatabase();
-  
-  server.listen(PORT, '0.0.0.0', () => {
-    console.log(`✅ Сервер запущен на порту ${PORT}`);
-    console.log(`🌐 Локальный URL: http://localhost:${PORT}`);
-    console.log(`🌐 Внешний URL: ${RENDER_URL}`);
-    console.log(`❤️  Health check: ${RENDER_URL}/health`);
-    console.log(`🔧 API тест: ${RENDER_URL}/api/test`);
-  });
-}
-
-// Обработка ошибок
-process.on('uncaughtException', (error) => {
-  console.error('❌ Непредвиденная ошибка:', error);
 });
-
-process.on('unhandledRejection', (reason, promise) => {
-  console.error('❌ Необработанное обещание:', reason);
-});
-
-startServer();
