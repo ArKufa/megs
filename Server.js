@@ -3,6 +3,8 @@ const http = require('http');
 const socketIo = require('socket.io');
 const cors = require('cors');
 const path = require('path');
+const sqlite3 = require('sqlite3').verbose();
+const bcrypt = require('bcryptjs');
 
 const app = express();
 const server = http.createServer(app);
@@ -24,322 +26,226 @@ app.get('/', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
-// Хранилище данных
+// Инициализация базы данных
+const db = new sqlite3.Database(':memory:');
+
+db.serialize(() => {
+  db.run(`CREATE TABLE users (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    username TEXT UNIQUE,
+    password TEXT,
+    avatar TEXT,
+    status TEXT DEFAULT 'online',
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+  )`);
+
+  db.run(`CREATE TABLE messages (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER,
+    content TEXT,
+    channel TEXT DEFAULT 'general',
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY(user_id) REFERENCES users(id)
+  )`);
+
+  db.run(`CREATE TABLE channels (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT UNIQUE,
+    description TEXT
+  )`);
+
+  // Создаем общий канал
+  db.run("INSERT INTO channels (name, description) VALUES ('general', 'Основной канал')");
+  db.run("INSERT INTO channels (name, description) VALUES ('voice', 'Голосовой чат')");
+
+  // Создаем тестового пользователя
+  const hashedPassword = bcrypt.hashSync('123456', 10);
+  db.run("INSERT INTO users (username, password, avatar) VALUES (?, ?, ?)", 
+    ['testuser', hashedPassword, '🦊']);
+});
+
+// Хранилище активных пользователей
+const activeUsers = new Map();
+
 class MessageStore {
   constructor() {
     this.messages = [];
-    this.users = new Map();
-    this.maxMessages = 200;
-    this.missions = [];
-    this.activeCalls = new Map();
+    this.maxMessages = 1000;
   }
 
-  addMessage(message) {
-    this.messages.push(message);
-    if (this.messages.length > this.maxMessages) {
-      this.messages = this.messages.slice(-this.maxMessages);
-    }
-    return message;
-  }
-
-  addUser(socketId, userData) {
-    this.users.set(socketId, {
-      ...userData,
-      joinTime: new Date(),
-      lastActive: new Date(),
-      status: 'online',
-      isInCall: false
+  async addMessage(userId, content, channel = 'general') {
+    return new Promise((resolve, reject) => {
+      db.run(
+        "INSERT INTO messages (user_id, content, channel) VALUES (?, ?, ?)",
+        [userId, content, channel],
+        function(err) {
+          if (err) reject(err);
+          else resolve(this.lastID);
+        }
+      );
     });
   }
 
-  removeUser(socketId) {
-    const user = this.users.get(socketId);
-    
-    // Завершаем активные звонки пользователя
-    if (this.activeCalls.has(socketId)) {
-      const callData = this.activeCalls.get(socketId);
-      this.activeCalls.delete(socketId);
-      if (callData.targetSocketId && this.users.has(callData.targetSocketId)) {
-        this.activeCalls.delete(callData.targetSocketId);
-      }
-    }
-    
-    this.users.delete(socketId);
-    return user;
-  }
-
-  updateUserActivity(socketId) {
-    const user = this.users.get(socketId);
-    if (user) {
-      user.lastActive = new Date();
-    }
-  }
-
-  getOnlineUsers() {
-    return Array.from(this.users.values()).map(user => ({
-      id: user.id,
-      username: user.username,
-      codename: user.codename,
-      status: user.status,
-      isInCall: user.isInCall
-    }));
-  }
-
-  // Управление звонками
-  startCall(callerSocketId, targetSocketId) {
-    const callData = {
-      callerSocketId,
-      targetSocketId,
-      startTime: new Date(),
-      status: 'ringing'
-    };
-    
-    this.activeCalls.set(callerSocketId, callData);
-    this.activeCalls.set(targetSocketId, callData);
-    
-    // Обновляем статусы пользователей
-    const caller = this.users.get(callerSocketId);
-    const target = this.users.get(targetSocketId);
-    if (caller) caller.isInCall = true;
-    if (target) target.isInCall = true;
-    
-    return callData;
-  }
-
-  endCall(socketId) {
-    const callData = this.activeCalls.get(socketId);
-    if (!callData) return null;
-
-    const { callerSocketId, targetSocketId } = callData;
-    
-    // Обновляем статусы пользователей
-    const caller = this.users.get(callerSocketId);
-    const target = this.users.get(targetSocketId);
-    if (caller) caller.isInCall = false;
-    if (target) target.isInCall = false;
-    
-    this.activeCalls.delete(callerSocketId);
-    this.activeCalls.delete(targetSocketId);
-    
-    return callData;
-  }
-
-  // Управление заданиями
-  addMission(mission) {
-    this.missions.push({
-      ...mission,
-      id: Date.now().toString(),
-      createdAt: new Date(),
-      status: 'active'
+  async getMessages(limit = 100) {
+    return new Promise((resolve, reject) => {
+      db.all(`
+        SELECT m.*, u.username, u.avatar 
+        FROM messages m 
+        JOIN users u ON m.user_id = u.id 
+        ORDER BY m.created_at DESC 
+        LIMIT ?
+      `, [limit], (err, rows) => {
+        if (err) reject(err);
+        else resolve(rows.reverse());
+      });
     });
-  }
-
-  completeMission(missionId) {
-    const mission = this.missions.find(m => m.id === missionId);
-    if (mission) {
-      mission.status = 'completed';
-      mission.completedAt = new Date();
-    }
-    return mission;
   }
 }
 
 const store = new MessageStore();
 
-// Пример заданий
-store.addMission({
-  title: 'Защита периметра',
-  description: 'Обеспечить безопасность восточного сектора',
-  priority: 'high',
-  assignedTo: []
+// API Routes
+app.post('/api/register', async (req, res) => {
+  const { username, password } = req.body;
+  
+  if (!username || !password) {
+    return res.status(400).json({ error: 'Username and password required' });
+  }
+
+  try {
+    const hashedPassword = await bcrypt.hash(password, 10);
+    db.run("INSERT INTO users (username, password, avatar) VALUES (?, ?, ?)", 
+      [username, hashedPassword, '👤'], 
+      function(err) {
+        if (err) {
+          res.status(400).json({ error: 'Username already exists' });
+        } else {
+          res.json({ success: true, userId: this.lastID });
+        }
+      }
+    );
+  } catch (error) {
+    res.status(500).json({ error: 'Server error' });
+  }
 });
 
-store.addMission({
-  title: 'Сбор информации',
-  description: 'Собрать данные о подозрительной активности',
-  priority: 'medium',
-  assignedTo: []
+app.post('/api/login', async (req, res) => {
+  const { username, password } = req.body;
+  
+  if (!username || !password) {
+    return res.status(400).json({ error: 'Username and password required' });
+  }
+
+  db.get("SELECT * FROM users WHERE username = ?", [username], async (err, user) => {
+    if (err || !user) {
+      return res.status(400).json({ error: 'Invalid credentials' });
+    }
+
+    const validPassword = await bcrypt.compare(password, user.password);
+    if (!validPassword) {
+      return res.status(400).json({ error: 'Invalid credentials' });
+    }
+
+    res.json({
+      success: true,
+      user: {
+        id: user.id,
+        username: user.username,
+        avatar: user.avatar,
+        status: user.status
+      }
+    });
+  });
+});
+
+app.get('/api/channels', (req, res) => {
+  db.all("SELECT * FROM channels", (err, rows) => {
+    if (err) {
+      res.status(500).json({ error: 'Database error' });
+    } else {
+      res.json(rows);
+    }
+  });
 });
 
 // Socket.io обработчики
 io.on('connection', (socket) => {
-  console.log('Новый агент подключен:', socket.id);
+  console.log('Новое подключение:', socket.id);
 
-  socket.on('user_join', (userData) => {
+  socket.on('user_authenticated', async (userData) => {
     const user = {
-      id: socket.id,
+      id: userData.id,
       username: userData.username,
-      codename: userData.codename || 'Агент',
+      avatar: userData.avatar,
+      socketId: socket.id,
       status: 'online',
-      joinTime: new Date(),
-      isInCall: false
+      joinTime: new Date()
     };
 
-    store.addUser(socket.id, user);
+    activeUsers.set(socket.id, user);
     
-    socket.emit('message_history', store.messages);
-    socket.emit('missions_update', store.missions);
+    // Отправляем историю сообщений
+    const messages = await store.getMessages(100);
+    socket.emit('message_history', messages);
     
-    socket.broadcast.emit('agent_joined', {
+    // Уведомляем всех о новом пользователе
+    socket.broadcast.emit('user_joined', {
       username: user.username,
-      codename: user.codename,
-      message: `Агент ${user.codename} присоединился к сети`,
+      avatar: user.avatar,
+      message: `${user.username} присоединился к чату`,
       timestamp: new Date()
     });
     
-    updateOnlineAgents();
+    updateOnlineUsers();
   });
 
-  // Сообщения
-  socket.on('send_message', (data) => {
-    const user = store.users.get(socket.id);
-    if (user && data.text.trim()) {
+  socket.on('send_message', async (data) => {
+    const user = activeUsers.get(socket.id);
+    if (user && data.content.trim()) {
+      const messageId = await store.addMessage(user.id, data.content.trim());
+      
       const message = {
-        id: Date.now().toString(),
+        id: messageId,
+        user_id: user.id,
         username: user.username,
-        codename: user.codename,
-        text: data.text.trim(),
-        timestamp: new Date(),
-        userId: socket.id,
-        type: 'message'
+        avatar: user.avatar,
+        content: data.content.trim(),
+        created_at: new Date()
       };
       
-      const savedMessage = store.addMessage(message);
-      io.emit('new_message', savedMessage);
+      io.emit('new_message', message);
     }
   });
 
-  // Звонки
-  socket.on('call_user', (data) => {
-    const caller = store.users.get(socket.id);
-    const targetUser = Array.from(store.users.values()).find(u => u.codename === data.targetCodename);
-    
-    if (caller && targetUser && !targetUser.isInCall) {
-      const callData = store.startCall(socket.id, targetUser.id);
-      
-      // Уведомляем вызываемого
-      io.to(targetUser.id).emit('incoming_call', {
-        callerCodename: caller.codename,
-        callerUsername: caller.username,
-        callId: callData.startTime.getTime()
-      });
-      
-      socket.emit('call_initiated', {
-        targetCodename: targetUser.codename,
-        status: 'ringing'
-      });
-    } else {
-      socket.emit('call_failed', {
-        reason: targetUser ? 'Агент занят' : 'Агент не найден'
-      });
-    }
-  });
-
-  socket.on('accept_call', (data) => {
-    const user = store.users.get(socket.id);
+  socket.on('disconnect', () => {
+    const user = activeUsers.get(socket.id);
     if (user) {
-      const callData = store.activeCalls.get(socket.id);
-      if (callData && callData.status === 'ringing') {
-        callData.status = 'active';
-        
-        // Уведомляем обоих пользователей
-        io.to(callData.callerSocketId).emit('call_accepted', {
-          targetCodename: user.codename
-        });
-        
-        io.to(callData.callerSocketId).to(socket.id).emit('call_connected', {
-          callId: callData.startTime.getTime()
-        });
-      }
-    }
-  });
-
-  socket.on('reject_call', (data) => {
-    const user = store.users.get(socket.id);
-    if (user) {
-      const endedCall = store.endCall(socket.id);
-      if (endedCall) {
-        io.to(endedCall.callerSocketId).emit('call_rejected', {
-          targetCodename: user.codename
-        });
-      }
-    }
-  });
-
-  socket.on('end_call', (data) => {
-    const endedCall = store.endCall(socket.id);
-    if (endedCall) {
-      const otherSocketId = endedCall.callerSocketId === socket.id ? 
-                           endedCall.targetSocketId : endedCall.callerSocketId;
+      activeUsers.delete(socket.id);
       
-      io.to(otherSocketId).emit('call_ended', {
-        reason: 'Собеседник завершил звонок'
-      });
-    }
-  });
-
-  // Задания
-  socket.on('assign_mission', (data) => {
-    const mission = store.missions.find(m => m.id === data.missionId);
-    if (mission) {
-      if (!mission.assignedTo.includes(data.codename)) {
-        mission.assignedTo.push(data.codename);
-        io.emit('missions_update', store.missions);
-      }
-    }
-  });
-
-  socket.on('complete_mission', (data) => {
-    const mission = store.completeMission(data.missionId);
-    if (mission) {
-      io.emit('missions_update', store.missions);
-      io.emit('new_message', {
-        id: Date.now().toString(),
-        username: 'СИСТЕМА',
-        codename: 'СИСТЕМА',
-        text: `Задание "${mission.title}" выполнено агентом ${data.codename}`,
-        timestamp: new Date(),
-        type: 'system'
-      });
-    }
-  });
-
-  socket.on('disconnect', (reason) => {
-    const user = store.removeUser(socket.id);
-    if (user) {
-      socket.broadcast.emit('agent_left', {
+      socket.broadcast.emit('user_left', {
         username: user.username,
-        codename: user.codename,
-        message: `Агент ${user.codename} покинул сеть`,
-        timestamp: new Date(),
-        reason: reason
+        avatar: user.avatar,
+        message: `${user.username} покинул чат`,
+        timestamp: new Date()
       });
       
-      updateOnlineAgents();
+      updateOnlineUsers();
     }
   });
-});
 
-function updateOnlineAgents() {
-  const onlineAgents = store.getOnlineUsers();
-  io.emit('online_agents', onlineAgents);
-}
-
-// Статус сервера
-app.get('/status', (req, res) => {
-  res.json({
-    status: 'active',
-    agentsOnline: store.users.size,
-    totalMessages: store.messages.length,
-    activeMissions: store.missions.filter(m => m.status === 'active').length,
-    activeCalls: store.activeCalls.size / 2,
-    serverTime: new Date()
-  });
+  function updateOnlineUsers() {
+    const onlineUsers = Array.from(activeUsers.values()).map(user => ({
+      id: user.id,
+      username: user.username,
+      avatar: user.avatar,
+      status: user.status
+    }));
+    
+    io.emit('online_users', onlineUsers);
+  }
 });
 
 const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => {
-  console.log(`🕵️ Сервер активен на порту ${PORT}`);
-  console.log(`🌐 Доступен глобально`);
-  console.log(`👥 Агентов онлайн: ${store.users.size}`);
+  console.log(`💬 Discord-like сервер запущен на порту ${PORT}`);
 });
