@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>LOCAL MESSENGER - MILITARY COMMS</title>
+    <title>Local Messenger</title>
     <style>
         * {
             margin: 0;
@@ -13,52 +13,41 @@
         }
 
         :root {
-            --military-dark: #0a0f1c;
-            --military-darker: #050a14;
-            --military-green: #1a3c1a;
-            --military-olive: #4a5d23;
-            --military-sand: #8a7f6d;
-            --military-red: #8b0000;
-            --military-orange: #d35400;
-            --military-gold: #b8860b;
-            --text-primary: #e8e6e3;
-            --text-secondary: #b0b0b0;
-            --text-muted: #808080;
-            --border: #2a3c2a;
-            --success: #228b22;
-            --warning: #ff8c00;
-            --danger: #dc143c;
-            --command: #4169e1;
+            --primary: #0088cc;
+            --primary-dark: #0077b3;
+            --background: #ffffff;
+            --surface: #f8f9fa;
+            --card: #ffffff;
+            --border: #e6e6e6;
+            --text-primary: #000000;
+            --text-secondary: #667781;
+            --text-muted: #8696a0;
+            --message-out: #d9fdd3;
+            --message-in: #ffffff;
+            --online: #00c853;
+            --typing: #666;
+            --error: #ff4444;
+            --success: #00c853;
+        }
+
+        [data-theme="dark"] {
+            --background: #111b21;
+            --surface: #202c33;
+            --card: #1f2c33;
+            --border: #2a3942;
+            --text-primary: #e9edef;
+            --text-secondary: #8696a0;
+            --text-muted: #667781;
+            --message-out: #005c4b;
+            --message-in: #202c33;
         }
 
         body {
-            font-family: 'Courier New', monospace;
-            background: var(--military-dark);
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: var(--background);
             color: var(--text-primary);
             height: 100vh;
             overflow: hidden;
-            background-image: 
-                radial-gradient(circle at 20% 30%, rgba(26, 60, 26, 0.3) 0%, transparent 50%),
-                radial-gradient(circle at 80% 70%, rgba(10, 15, 28, 0.4) 0%, transparent 50%);
-        }
-
-        /* Terminal-like scanlines effect */
-        body::before {
-            content: '';
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: repeating-linear-gradient(
-                0deg,
-                rgba(0, 0, 0, 0.03) 0px,
-                rgba(0, 0, 0, 0.03) 1px,
-                transparent 1px,
-                transparent 2px
-            );
-            pointer-events: none;
-            z-index: 1000;
         }
 
         .screen {
@@ -75,298 +64,214 @@
             display: flex;
         }
 
-        /* Authentication Screen */
+        /* Авторизация */
         .auth-screen {
-            background: linear-gradient(135deg, var(--military-darker), var(--military-green));
+            background: linear-gradient(135deg, var(--primary), var(--primary-dark));
             justify-content: center;
             align-items: center;
             padding: 20px;
         }
 
-        .auth-terminal {
-            background: rgba(10, 15, 28, 0.95);
-            border: 2px solid var(--military-olive);
-            border-radius: 8px;
+        .auth-container {
+            background: var(--card);
+            border-radius: 20px;
             padding: 40px 30px;
             width: 100%;
-            max-width: 450px;
-            box-shadow: 0 0 30px rgba(26, 60, 26, 0.5);
-            position: relative;
+            max-width: 400px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.1);
         }
 
-        .auth-terminal::before {
-            content: 'SECURE ACCESS TERMINAL';
-            position: absolute;
-            top: -12px;
-            left: 20px;
-            background: var(--military-green);
-            color: var(--text-primary);
-            padding: 4px 12px;
-            font-size: 12px;
-            font-weight: bold;
-            border: 1px solid var(--military-olive);
-        }
-
-        .military-logo {
+        .app-logo {
             text-align: center;
             margin-bottom: 30px;
         }
 
-        .logo-badge {
+        .logo-icon {
             width: 80px;
             height: 80px;
-            background: var(--military-green);
-            border: 3px solid var(--military-gold);
-            border-radius: 50%;
+            background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+            border-radius: 20px;
             display: flex;
             align-items: center;
             justify-content: center;
             margin: 0 auto 20px;
-            color: var(--military-gold);
+            color: white;
             font-size: 32px;
             font-weight: bold;
         }
 
         .app-title {
             font-size: 28px;
-            font-weight: bold;
+            font-weight: 300;
             margin-bottom: 8px;
-            color: var(--military-gold);
-            text-transform: uppercase;
-            letter-spacing: 2px;
         }
 
         .app-subtitle {
             color: var(--text-secondary);
-            font-size: 14px;
-            text-transform: uppercase;
-            letter-spacing: 1px;
+            font-size: 16px;
+        }
+
+        .auth-tabs {
+            display: flex;
+            background: var(--surface);
+            border-radius: 12px;
+            padding: 4px;
+            margin-bottom: 24px;
+        }
+
+        .auth-tab {
+            flex: 1;
+            padding: 12px;
+            border: none;
+            background: transparent;
+            border-radius: 8px;
+            color: var(--text-secondary);
+            font-size: 16px;
+            cursor: pointer;
+        }
+
+        .auth-tab.active {
+            background: var(--card);
+            color: var(--text-primary);
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
         }
 
         .form-group {
             margin-bottom: 20px;
-            position: relative;
-        }
-
-        .form-label {
-            display: block;
-            margin-bottom: 8px;
-            color: var(--text-secondary);
-            font-size: 14px;
-            text-transform: uppercase;
-            letter-spacing: 1px;
         }
 
         .form-input {
             width: 100%;
-            padding: 14px 16px;
-            background: rgba(26, 60, 26, 0.3);
-            border: 1px solid var(--military-olive);
-            border-radius: 4px;
+            padding: 16px;
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            background: var(--background);
             color: var(--text-primary);
-            font-family: 'Courier New', monospace;
             font-size: 16px;
-            transition: all 0.3s ease;
         }
 
         .form-input:focus {
             outline: none;
-            border-color: var(--military-gold);
-            box-shadow: 0 0 10px rgba(184, 134, 11, 0.3);
+            border-color: var(--primary);
         }
 
         .auth-button {
             width: 100%;
             padding: 16px;
-            background: linear-gradient(135deg, var(--military-green), var(--military-olive));
-            border: 1px solid var(--military-gold);
-            border-radius: 4px;
-            color: var(--text-primary);
-            font-family: 'Courier New', monospace;
+            background: var(--primary);
+            color: white;
+            border: none;
+            border-radius: 12px;
             font-size: 16px;
-            font-weight: bold;
-            text-transform: uppercase;
-            letter-spacing: 1px;
+            font-weight: 600;
             cursor: pointer;
-            transition: all 0.3s ease;
+            margin-top: 10px;
         }
 
         .auth-button:hover {
-            background: linear-gradient(135deg, var(--military-olive), var(--military-green));
-            box-shadow: 0 0 20px rgba(184, 134, 11, 0.4);
+            background: var(--primary-dark);
         }
 
-        .operative-select {
-            display: grid;
-            grid-template-columns: repeat(2, 1fr);
-            gap: 10px;
-            margin-bottom: 20px;
-        }
-
-        .operative-card {
-            background: rgba(26, 60, 26, 0.3);
-            border: 1px solid var(--military-olive);
-            border-radius: 4px;
-            padding: 12px;
-            text-align: center;
-            cursor: pointer;
-            transition: all 0.3s ease;
-        }
-
-        .operative-card:hover {
-            border-color: var(--military-gold);
-            background: rgba(184, 134, 11, 0.1);
-        }
-
-        .operative-card.active {
-            border-color: var(--military-gold);
-            background: rgba(184, 134, 11, 0.2);
-        }
-
-        .operative-avatar {
-            font-size: 24px;
-            margin-bottom: 8px;
-        }
-
-        .operative-callsign {
-            font-weight: bold;
+        .error-message {
+            color: var(--error);
             font-size: 14px;
+            text-align: center;
+            margin-top: 10px;
+            display: none;
         }
 
-        .operative-rank {
-            font-size: 12px;
-            color: var(--text-secondary);
-        }
-
-        /* Main Interface */
+        /* Основной интерфейс */
         .main-screen {
-            background: var(--military-dark);
+            background: var(--background);
         }
 
-        /* Military Header */
-        .military-header {
-            background: rgba(10, 15, 28, 0.95);
-            border-bottom: 2px solid var(--military-olive);
-            padding: 12px 20px;
+        /* Header */
+        .header {
+            background: var(--surface);
+            padding: 15px 20px;
+            border-bottom: 1px solid var(--border);
             display: flex;
             justify-content: space-between;
             align-items: center;
-            position: relative;
         }
 
-        .header-left {
-            display: flex;
-            align-items: center;
-            gap: 15px;
-        }
-
-        .operative-badge {
+        .user-info {
             display: flex;
             align-items: center;
             gap: 12px;
-            padding: 8px 16px;
-            background: rgba(26, 60, 26, 0.3);
-            border: 1px solid var(--military-olive);
-            border-radius: 4px;
         }
 
-        .operative-avatar {
+        .user-avatar {
             width: 40px;
             height: 40px;
-            background: var(--military-green);
-            border: 2px solid var(--military-gold);
             border-radius: 50%;
+            background: var(--primary);
             display: flex;
             align-items: center;
             justify-content: center;
+            color: white;
             font-weight: bold;
+            font-size: 18px;
         }
 
-        .operative-info h2 {
+        .user-details h2 {
             font-size: 16px;
             margin-bottom: 2px;
-            color: var(--military-gold);
         }
 
-        .operative-info .rank {
-            font-size: 12px;
+        .user-status {
+            font-size: 13px;
             color: var(--text-secondary);
-            text-transform: uppercase;
         }
 
-        .status-indicator {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            font-size: 12px;
-            color: var(--success);
-        }
-
-        .status-indicator::before {
+        .status.online::before {
             content: '';
+            display: inline-block;
             width: 8px;
             height: 8px;
-            background: var(--success);
+            background: var(--online);
             border-radius: 50%;
-            animation: pulse 2s infinite;
+            margin-right: 6px;
         }
 
-        @keyframes pulse {
-            0%, 100% { opacity: 1; }
-            50% { opacity: 0.5; }
-        }
-
-        .header-right {
+        .header-actions {
             display: flex;
-            gap: 10px;
+            gap: 15px;
         }
 
-        .military-button {
-            padding: 8px 16px;
-            background: rgba(26, 60, 26, 0.3);
-            border: 1px solid var(--military-olive);
-            border-radius: 4px;
-            color: var(--text-primary);
-            font-family: 'Courier New', monospace;
-            font-size: 12px;
+        .header-button {
+            background: none;
+            border: none;
+            font-size: 20px;
+            color: var(--text-secondary);
             cursor: pointer;
-            transition: all 0.3s ease;
+            padding: 8px;
         }
 
-        .military-button:hover {
-            border-color: var(--military-gold);
-            background: rgba(184, 134, 11, 0.1);
-        }
-
-        /* Military Tabs */
-        .military-tabs {
+        /* Вкладки */
+        .nav-tabs {
             display: flex;
-            background: rgba(10, 15, 28, 0.8);
-            border-bottom: 1px solid var(--military-olive);
+            background: var(--surface);
+            border-bottom: 1px solid var(--border);
         }
 
-        .military-tab {
+        .nav-tab {
             flex: 1;
             padding: 15px 0;
             background: none;
             border: none;
             border-bottom: 3px solid transparent;
             color: var(--text-secondary);
-            font-family: 'Courier New', monospace;
             font-size: 14px;
-            text-transform: uppercase;
-            letter-spacing: 1px;
             cursor: pointer;
-            transition: all 0.3s ease;
         }
 
-        .military-tab.active {
-            color: var(--military-gold);
-            border-bottom-color: var(--military-gold);
-            background: rgba(184, 134, 11, 0.1);
+        .nav-tab.active {
+            color: var(--primary);
+            border-bottom-color: var(--primary);
         }
 
-        /* Tab Content */
+        /* Контент вкладок */
         .tab-content {
             flex: 1;
             overflow: hidden;
@@ -378,67 +283,138 @@
             flex-direction: column;
         }
 
-        /* Communications Tab */
-        .comms-terminal {
+        /* Список чатов */
+        .chats-container {
             flex: 1;
-            display: flex;
-            flex-direction: column;
-            background: rgba(5, 10, 20, 0.8);
-            border: 1px solid var(--military-olive);
-            margin: 10px;
-            border-radius: 4px;
+            overflow-y: auto;
         }
 
-        .terminal-header {
-            background: var(--military-green);
-            padding: 10px 15px;
-            border-bottom: 1px solid var(--military-olive);
+        .search-box {
+            padding: 15px 20px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .search-input {
+            width: 100%;
+            padding: 12px 20px;
+            border: none;
+            border-radius: 20px;
+            background: var(--surface);
+            color: var(--text-primary);
+            font-size: 15px;
+        }
+
+        .search-input:focus {
+            outline: none;
+        }
+
+        .chat-list {
+            padding: 10px 0;
+        }
+
+        .chat-item {
+            display: flex;
+            align-items: center;
+            padding: 15px 20px;
+            gap: 15px;
+            cursor: pointer;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .chat-item:hover {
+            background: var(--surface);
+        }
+
+        .chat-avatar {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            background: var(--primary);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+            font-size: 18px;
+            position: relative;
+        }
+
+        .online-dot {
+            position: absolute;
+            bottom: 2px;
+            right: 2px;
+            width: 12px;
+            height: 12px;
+            background: var(--online);
+            border: 2px solid var(--card);
+            border-radius: 50%;
+        }
+
+        .chat-content {
+            flex: 1;
+        }
+
+        .chat-header {
             display: flex;
             justify-content: space-between;
-            align-items: center;
+            margin-bottom: 5px;
         }
 
-        .terminal-title {
-            font-weight: bold;
-            text-transform: uppercase;
-            letter-spacing: 1px;
+        .chat-name {
+            font-weight: 600;
+            font-size: 16px;
         }
 
-        .channel-selector {
-            display: flex;
-            gap: 10px;
+        .chat-time {
+            font-size: 12px;
+            color: var(--text-muted);
         }
 
-        .channel-btn {
-            padding: 4px 12px;
-            background: rgba(10, 15, 28, 0.6);
-            border: 1px solid var(--military-olive);
-            border-radius: 3px;
+        .chat-preview {
+            font-size: 14px;
             color: var(--text-secondary);
-            font-size: 11px;
-            cursor: pointer;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
         }
 
-        .channel-btn.active {
-            background: var(--military-gold);
-            color: var(--military-dark);
-            border-color: var(--military-gold);
+        /* Чат */
+        .chat-screen {
+            background: var(--background);
+        }
+
+        .chat-header {
+            background: var(--surface);
+            padding: 15px 20px;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .back-button {
+            background: none;
+            border: none;
+            font-size: 20px;
+            color: var(--primary);
+            cursor: pointer;
         }
 
         .messages-container {
             flex: 1;
             overflow-y: auto;
-            padding: 15px;
+            padding: 20px;
             display: flex;
             flex-direction: column;
-            gap: 8px;
+            gap: 10px;
         }
 
         .message {
-            padding: 10px 12px;
-            border-radius: 4px;
-            border-left: 3px solid var(--military-olive);
-            background: rgba(26, 60, 26, 0.2);
+            max-width: 70%;
+            padding: 12px 16px;
+            border-radius: 18px;
+            position: relative;
+            word-wrap: break-word;
             animation: messageAppear 0.3s ease;
         }
 
@@ -453,72 +429,56 @@
             }
         }
 
-        .message.priority-high {
-            border-left-color: var(--warning);
-            background: rgba(255, 140, 0, 0.1);
+        .message.outgoing {
+            background: var(--message-out);
+            align-self: flex-end;
+            border-bottom-right-radius: 6px;
         }
 
-        .message.priority-critical {
-            border-left-color: var(--danger);
-            background: rgba(220, 20, 60, 0.1);
-            animation: alertPulse 2s infinite;
-        }
-
-        @keyframes alertPulse {
-            0%, 100% { background: rgba(220, 20, 60, 0.1); }
-            50% { background: rgba(220, 20, 60, 0.2); }
-        }
-
-        .message.command {
-            border-left-color: var(--command);
-            background: rgba(65, 105, 225, 0.1);
-        }
-
-        .message-header {
-            display: flex;
-            justify-content: space-between;
-            margin-bottom: 4px;
-            font-size: 12px;
-        }
-
-        .message-callsign {
-            font-weight: bold;
-            color: var(--military-gold);
-        }
-
-        .message-rank {
-            color: var(--text-secondary);
-            margin-right: 8px;
-        }
-
-        .message-time {
-            color: var(--text-muted);
-            font-size: 11px;
+        .message.incoming {
+            background: var(--message-in);
+            align-self: flex-start;
+            border: 1px solid var(--border);
+            border-bottom-left-radius: 6px;
         }
 
         .message-content {
-            font-size: 14px;
+            font-size: 15px;
             line-height: 1.4;
         }
 
+        .message-time {
+            font-size: 11px;
+            color: var(--text-muted);
+            text-align: right;
+            margin-top: 5px;
+        }
+
+        .typing-indicator {
+            padding: 10px 20px;
+            color: var(--typing);
+            font-style: italic;
+            font-size: 14px;
+            display: none;
+        }
+
         .input-container {
-            padding: 15px;
-            background: rgba(10, 15, 28, 0.8);
-            border-top: 1px solid var(--military-olive);
+            padding: 15px 20px;
+            background: var(--surface);
+            border-top: 1px solid var(--border);
             display: flex;
-            gap: 10px;
+            gap: 12px;
             align-items: flex-end;
         }
 
         .message-input {
             flex: 1;
-            padding: 12px 16px;
-            background: rgba(26, 60, 26, 0.3);
-            border: 1px solid var(--military-olive);
-            border-radius: 4px;
+            padding: 12px 18px;
+            border: 1px solid var(--border);
+            border-radius: 24px;
+            background: var(--background);
             color: var(--text-primary);
-            font-family: 'Courier New', monospace;
-            font-size: 14px;
+            font-size: 15px;
             resize: none;
             max-height: 120px;
             min-height: 44px;
@@ -527,546 +487,417 @@
 
         .message-input:focus {
             outline: none;
-            border-color: var(--military-gold);
+            border-color: var(--primary);
         }
 
         .send-button {
-            padding: 12px 20px;
-            background: var(--military-green);
-            border: 1px solid var(--military-olive);
-            border-radius: 4px;
-            color: var(--text-primary);
-            font-family: 'Courier New', monospace;
-            font-weight: bold;
+            width: 44px;
+            height: 44px;
+            background: var(--primary);
+            border: none;
+            border-radius: 50%;
+            color: white;
             cursor: pointer;
-            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
         }
 
         .send-button:hover {
-            background: var(--military-olive);
-            border-color: var(--military-gold);
+            background: var(--primary-dark);
         }
 
-        .priority-selector {
-            display: flex;
-            gap: 5px;
+        /* Поиск пользователей */
+        .search-results {
+            position: absolute;
+            top: 100%;
+            left: 0;
+            right: 0;
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: 0 0 12px 12px;
+            max-height: 200px;
+            overflow-y: auto;
+            display: none;
+            z-index: 1000;
         }
 
-        .priority-btn {
-            padding: 6px 10px;
-            background: rgba(26, 60, 26, 0.3);
-            border: 1px solid var(--military-olive);
-            border-radius: 3px;
-            color: var(--text-secondary);
-            font-size: 11px;
-            cursor: pointer;
-        }
-
-        .priority-btn.active {
-            background: var(--warning);
-            color: var(--military-dark);
-            border-color: var(--warning);
-        }
-
-        /* Missions Tab */
-        .missions-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-            gap: 15px;
-            padding: 15px;
-        }
-
-        .mission-card {
-            background: rgba(26, 60, 26, 0.3);
-            border: 1px solid var(--military-olive);
-            border-radius: 4px;
-            padding: 15px;
-            position: relative;
-        }
-
-        .mission-card.priority-high {
-            border-color: var(--warning);
-        }
-
-        .mission-card.priority-critical {
-            border-color: var(--danger);
-        }
-
-        .mission-header {
-            display: flex;
-            justify-content: space-between;
-            margin-bottom: 10px;
-        }
-
-        .mission-codename {
-            font-weight: bold;
-            color: var(--military-gold);
-            font-size: 16px;
-        }
-
-        .mission-status {
-            padding: 4px 8px;
-            background: var(--success);
-            border-radius: 3px;
-            font-size: 11px;
-            font-weight: bold;
-        }
-
-        .mission-status.planning {
-            background: var(--warning);
-        }
-
-        .mission-status.active {
-            background: var(--success);
-        }
-
-        .mission-details {
-            font-size: 13px;
-            color: var(--text-secondary);
-            margin-bottom: 10px;
-        }
-
-        .mission-squad {
+        .search-result-item {
+            padding: 12px 20px;
             display: flex;
             align-items: center;
-            gap: 8px;
-            font-size: 12px;
-            color: var(--text-muted);
-        }
-
-        /* Equipment Tab */
-        .equipment-list {
-            padding: 15px;
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
             gap: 12px;
+            cursor: pointer;
+            border-bottom: 1px solid var(--border);
         }
 
-        .equipment-card {
-            background: rgba(26, 60, 26, 0.3);
-            border: 1px solid var(--military-olive);
-            border-radius: 4px;
-            padding: 12px;
+        .search-result-item:hover {
+            background: var(--surface);
         }
 
-        .equipment-name {
-            font-weight: bold;
-            margin-bottom: 8px;
-            color: var(--military-gold);
+        .search-result-item:last-child {
+            border-bottom: none;
         }
 
-        .equipment-status {
-            display: inline-block;
-            padding: 2px 8px;
-            background: var(--success);
-            border-radius: 3px;
-            font-size: 11px;
-            margin-bottom: 8px;
-        }
-
-        .equipment-status.maintenance {
-            background: var(--warning);
-        }
-
-        .equipment-status.offline {
-            background: var(--danger);
-        }
-
-        /* Operatives Tab */
-        .operatives-grid {
-            padding: 15px;
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 12px;
-        }
-
-        .operative-card {
-            background: rgba(26, 60, 26, 0.3);
-            border: 1px solid var(--military-olive);
-            border-radius: 4px;
-            padding: 12px;
-            text-align: center;
-        }
-
-        .operative-card.online {
-            border-color: var(--success);
-        }
-
-        .operative-avatar {
-            font-size: 24px;
-            margin-bottom: 8px;
-        }
-
-        .operative-callsign {
-            font-weight: bold;
-            margin-bottom: 4px;
-            color: var(--military-gold);
-        }
-
-        .operative-unit {
-            font-size: 12px;
-            color: var(--text-secondary);
-            margin-bottom: 4px;
-        }
-
-        .operative-status {
-            font-size: 11px;
-            color: var(--success);
-        }
-
-        /* Utility */
+        /* Утилиты */
         .hidden {
             display: none !important;
         }
 
-        .typing-indicator {
-            padding: 8px 15px;
-            color: var(--text-muted);
-            font-style: italic;
-            font-size: 12px;
-            display: none;
-        }
-
-        .emergency-alert {
+        .notification {
             position: fixed;
             top: 20px;
-            left: 50%;
-            transform: translateX(-50%);
-            background: var(--danger);
+            right: 20px;
+            background: var(--success);
             color: white;
-            padding: 15px 20px;
-            border-radius: 4px;
+            padding: 12px 20px;
+            border-radius: 8px;
             z-index: 10000;
-            animation: emergencyPulse 1s infinite;
-            text-align: center;
-        }
-
-        @keyframes emergencyPulse {
-            0%, 100% { opacity: 1; }
-            50% { opacity: 0.7; }
+            display: none;
         }
     </style>
 </head>
 <body>
-    <!-- Authentication Screen -->
+    <!-- Экран авторизации -->
     <div class="screen auth-screen active" id="authScreen">
-        <div class="auth-terminal">
-            <div class="military-logo">
-                <div class="logo-badge">LM</div>
-                <h1 class="app-title">LOCAL MESSENGER</h1>
-                <p class="app-subtitle">MILITARY COMMUNICATIONS SYSTEM</p>
+        <div class="auth-container">
+            <div class="app-logo">
+                <div class="logo-icon">LM</div>
+                <h1 class="app-title">Local Messenger</h1>
+                <p class="app-subtitle">Быстрое и безопасное общение</p>
             </div>
 
-            <div class="operative-select" id="operativeSelect">
-                <!-- Operatives will be loaded here -->
+            <div class="auth-tabs">
+                <button class="auth-tab active" onclick="showAuthTab('login')">Вход</button>
+                <button class="auth-tab" onclick="showAuthTab('register')">Регистрация</button>
             </div>
 
-            <div class="form-group">
-                <label class="form-label">CALLSIGN</label>
-                <input type="text" class="form-input" id="loginCallsign" placeholder="ENTER CALLSIGN" value="HAWK">
+            <!-- Форма входа -->
+            <div id="loginForm">
+                <div class="form-group">
+                    <input type="text" class="form-input" id="loginUsername" placeholder="Имя пользователя">
+                </div>
+                <div class="form-group">
+                    <input type="password" class="form-input" id="loginPassword" placeholder="Пароль">
+                </div>
+                <button class="auth-button" onclick="login()">Войти в чат</button>
+                <div class="error-message" id="loginError"></div>
             </div>
-            <div class="form-group">
-                <label class="form-label">PASSWORD</label>
-                <input type="password" class="form-input" id="loginPassword" placeholder="ENTER PASSWORD" value="123">
+
+            <!-- Форма регистрации -->
+            <div id="registerForm" class="hidden">
+                <div class="form-group">
+                    <input type="text" class="form-input" id="registerUsername" placeholder="Имя пользователя">
+                </div>
+                <div class="form-group">
+                    <input type="email" class="form-input" id="registerEmail" placeholder="Email (необязательно)">
+                </div>
+                <div class="form-group">
+                    <input type="password" class="form-input" id="registerPassword" placeholder="Пароль">
+                </div>
+                <button class="auth-button" onclick="register()">Создать аккаунт</button>
+                <div class="error-message" id="registerError"></div>
             </div>
-            <button class="auth-button" onclick="authenticate()">ACCESS TERMINAL</button>
         </div>
     </div>
 
-    <!-- Main Interface -->
+    <!-- Основной интерфейс -->
     <div class="screen main-screen" id="mainScreen">
-        <!-- Military Header -->
-        <div class="military-header">
-            <div class="header-left">
-                <div class="operative-badge">
-                    <div class="operative-avatar" id="currentAvatar">🦅</div>
-                    <div class="operative-info">
-                        <h2 id="currentCallsign">HAWK</h2>
-                        <div class="rank" id="currentRank">CAPTAIN</div>
-                    </div>
+        <!-- Header -->
+        <div class="header">
+            <div class="user-info">
+                <div class="user-avatar" id="userAvatar">👤</div>
+                <div class="user-details">
+                    <h2 id="userName">Пользователь</h2>
+                    <div class="user-status status online" id="userStatus">В сети</div>
                 </div>
-                <div class="status-indicator" id="connectionStatus">COMMS ONLINE</div>
             </div>
-            <div class="header-right">
-                <button class="military-button" onclick="requestBackup()">🚨 BACKUP</button>
-                <button class="military-button" onclick="sendEmergency()">⚠️ ALERT</button>
-                <button class="military-button" onclick="logout()">LOGOUT</button>
+            <div class="header-actions">
+                <button class="header-button" onclick="toggleTheme()">🌙</button>
+                <button class="header-button" onclick="searchUsers()">🔍</button>
+                <button class="header-button" onclick="logout()">🚪</button>
             </div>
         </div>
 
-        <!-- Military Tabs -->
-        <div class="military-tabs">
-            <button class="military-tab active" onclick="showTab('comms')">COMMUNICATIONS</button>
-            <button class="military-tab" onclick="showTab('missions')">MISSIONS</button>
-            <button class="military-tab" onclick="showTab('equipment')">EQUIPMENT</button>
-            <button class="military-tab" onclick="showTab('operatives')">OPERATIVES</button>
+        <!-- Вкладки -->
+        <div class="nav-tabs">
+            <button class="nav-tab active" onclick="showTab('chats')">Чаты</button>
+            <button class="nav-tab" onclick="showTab('contacts')">Контакты</button>
+            <button class="nav-tab" onclick="showTab('profile')">Профиль</button>
         </div>
 
-        <!-- Communications Tab -->
-        <div class="tab-content active" id="commsTab">
-            <div class="comms-terminal">
-                <div class="terminal-header">
-                    <div class="terminal-title">SECURE COMMS CHANNEL</div>
-                    <div class="channel-selector">
-                        <button class="channel-btn active" onclick="switchChannel('GLOBAL')">GLOBAL</button>
-                        <button class="channel-btn" onclick="switchChannel('UNIT')">UNIT</button>
-                        <button class="channel-btn" onclick="switchChannel('COMMAND')">COMMAND</button>
-                    </div>
+        <!-- Чаты -->
+        <div class="tab-content active" id="chatsTab">
+            <div class="chats-container">
+                <div class="search-box">
+                    <input type="text" class="search-input" placeholder="Поиск чатов..." oninput="searchChats(this.value)">
+                    <div class="search-results" id="chatSearchResults"></div>
                 </div>
-                <div class="messages-container" id="messagesContainer">
-                    <div class="message command">
-                        <div class="message-header">
-                            <span class="message-callsign">COMMAND</span>
-                            <span class="message-time">06:00:00</span>
+                <div class="chat-list" id="chatList">
+                    <!-- Чаты будут загружены здесь -->
+                </div>
+            </div>
+        </div>
+
+        <!-- Контакты -->
+        <div class="tab-content" id="contactsTab">
+            <div class="chats-container">
+                <div class="search-box">
+                    <input type="text" class="search-input" placeholder="Поиск пользователей..." oninput="searchAllUsers(this.value)">
+                    <div class="search-results" id="userSearchResults"></div>
+                </div>
+                <div class="chat-list" id="contactsList">
+                    <!-- Контакты будут загружены здесь -->
+                </div>
+            </div>
+        </div>
+
+        <!-- Профиль -->
+        <div class="tab-content" id="profileTab">
+            <div class="chats-container">
+                <div class="chat-list">
+                    <div class="chat-item">
+                        <div class="user-avatar" id="profileAvatar">👤</div>
+                        <div class="chat-content">
+                            <div class="chat-name" id="profileName">Пользователь</div>
+                            <div class="chat-preview">Уровень: <span id="profileLevel">1</span></div>
                         </div>
-                        <div class="message-content">
-                            LOCAL MESSENGER SYSTEM OPERATIONAL. ALL UNITS REPORT STATUS.
+                    </div>
+                    <div class="chat-item" onclick="showSettings()">
+                        <div class="chat-avatar">⚙️</div>
+                        <div class="chat-content">
+                            <div class="chat-name">Настройки</div>
+                            <div class="chat-preview">Настройки приложения</div>
+                        </div>
+                    </div>
+                    <div class="chat-item" onclick="showFriends()">
+                        <div class="chat-avatar">👥</div>
+                        <div class="chat-content">
+                            <div class="chat-name">Друзья</div>
+                            <div class="chat-preview">Управление друзьями</div>
                         </div>
                     </div>
                 </div>
-                <div class="typing-indicator" id="typingIndicator"></div>
-                <div class="input-container">
-                    <div class="priority-selector">
-                        <button class="priority-btn" onclick="setPriority('NORMAL')">NORMAL</button>
-                        <button class="priority-btn" onclick="setPriority('HIGH')">HIGH</button>
-                        <button class="priority-btn" onclick="setPriority('CRITICAL')">CRITICAL</button>
-                    </div>
-                    <textarea class="message-input" id="messageInput" placeholder="ENTER MESSAGE..." rows="1"></textarea>
-                    <button class="send-button" onclick="sendMessage()">SEND</button>
-                </div>
-            </div>
-        </div>
-
-        <!-- Missions Tab -->
-        <div class="tab-content" id="missionsTab">
-            <div class="missions-grid" id="missionsGrid">
-                <!-- Missions will be loaded here -->
-            </div>
-        </div>
-
-        <!-- Equipment Tab -->
-        <div class="tab-content" id="equipmentTab">
-            <div class="equipment-list" id="equipmentList">
-                <!-- Equipment will be loaded here -->
-            </div>
-        </div>
-
-        <!-- Operatives Tab -->
-        <div class="tab-content" id="operativesTab">
-            <div class="operatives-grid" id="operativesGrid">
-                <!-- Operatives will be loaded here -->
             </div>
         </div>
     </div>
+
+    <!-- Экран чата -->
+    <div class="screen chat-screen" id="chatScreen">
+        <div class="chat-header">
+            <button class="back-button" onclick="closeChat()">←</button>
+            <div class="user-avatar" id="chatAvatar">👤</div>
+            <div class="user-details">
+                <h2 id="chatUserName">Пользователь</h2>
+                <div class="user-status" id="chatUserStatus">В сети</div>
+            </div>
+        </div>
+
+        <div class="messages-container" id="messagesContainer">
+            <!-- Сообщения будут здесь -->
+        </div>
+
+        <div class="typing-indicator" id="typingIndicator"></div>
+
+        <div class="input-container">
+            <textarea class="message-input" id="messageInput" placeholder="Введите сообщение..." rows="1"></textarea>
+            <button class="send-button" onclick="sendMessage()">↑</button>
+        </div>
+    </div>
+
+    <!-- Уведомление -->
+    <div class="notification" id="notification"></div>
 
     <script src="/socket.io/socket.io.js"></script>
     <script>
-        // Military Global Variables
+        // Глобальные переменные
         let socket = null;
-        let currentOperative = null;
-        let currentChannel = 'GLOBAL';
-        let currentPriority = 'NORMAL';
+        let currentUser = null;
+        let currentChat = null;
+        let friends = [];
+        let chats = [];
         let isTyping = false;
         let typingTimer = null;
 
-        // Test Operatives Data
-        const testOperatives = [
-            { id: 'cmd_001', callsign: 'COMMAND', rank: 'COMMANDER', unit: 'COMMAND', password: '123', avatar: '⚡' },
-            { id: 'alpha_001', callsign: 'HAWK', rank: 'CAPTAIN', unit: 'ALPHA', password: '123', avatar: '🦅' },
-            { id: 'bravo_001', callsign: 'WOLF', rank: 'LIEUTENANT', unit: 'BRAVO', password: '123', avatar: '🐺' },
-            { id: 'charlie_001', callsign: 'BEAR', rank: 'SERGEANT', unit: 'CHARLIE', password: '123', avatar: '🐻' },
-            { id: 'delta_001', callsign: 'FOX', rank: 'SPECIALIST', unit: 'DELTA', password: '123', avatar: '🦊' }
-        ];
-
-        // Initialize the interface
+        // Инициализация
         document.addEventListener('DOMContentLoaded', function() {
-            loadOperatives();
             setupEventListeners();
+            checkAuth();
         });
 
-        // Load operative selection
-        function loadOperatives() {
-            const container = document.getElementById('operativeSelect');
-            container.innerHTML = '';
+        // Проверка авторизации
+        function checkAuth() {
+            const savedUser = localStorage.getItem('local_messenger_user');
+            if (savedUser) {
+                currentUser = JSON.parse(savedUser);
+                showMainInterface();
+                connectToServer();
+            }
+        }
 
-            testOperatives.forEach(op => {
-                const card = document.createElement('div');
-                card.className = 'operative-card';
-                card.onclick = () => selectOperative(op.callsign);
-                
-                card.innerHTML = `
-                    <div class="operative-avatar">${op.avatar}</div>
-                    <div class="operative-callsign">${op.callsign}</div>
-                    <div class="operative-rank">${op.rank}</div>
-                    <div class="operative-unit">${op.unit}</div>
-                `;
+        // Настройка обработчиков событий
+        function setupEventListeners() {
+            // Авторизация
+            document.getElementById('loginPassword').addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') login();
+            });
+            document.getElementById('registerPassword').addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') register();
+            });
 
-                container.appendChild(card);
+            // Сообщения
+            document.getElementById('messageInput').addEventListener('keypress', function(e) {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
+                    sendMessage();
+                }
+            });
+
+            document.getElementById('messageInput').addEventListener('input', function() {
+                this.style.height = 'auto';
+                this.style.height = Math.min(this.scrollHeight, 120) + 'px';
+                handleTyping();
             });
         }
 
-        function selectOperative(callsign) {
-            document.querySelectorAll('.operative-card').forEach(card => {
-                card.classList.remove('active');
-            });
+        // Показать таб авторизации
+        function showAuthTab(tab) {
+            document.getElementById('loginForm').classList.toggle('hidden', tab !== 'login');
+            document.getElementById('registerForm').classList.toggle('hidden', tab !== 'register');
             
-            event.target.closest('.operative-card').classList.add('active');
-            document.getElementById('loginCallsign').value = callsign;
+            document.querySelectorAll('.auth-tab').forEach(button => {
+                button.classList.toggle('active', 
+                    (tab === 'login' && button.textContent === 'Вход') ||
+                    (tab === 'register' && button.textContent === 'Регистрация')
+                );
+            });
         }
 
-        // Authentication
-        async function authenticate() {
-            const callsign = document.getElementById('loginCallsign').value.trim();
-            const password = document.getElementById('loginPassword').value;
+        // Регистрация
+        async function register() {
+            const username = document.getElementById('registerUsername').value.trim();
+            const email = document.getElementById('registerEmail').value.trim();
+            const password = document.getElementById('registerPassword').value;
 
-            if (!callsign || !password) {
-                showAlert('ENTER CALLSIGN AND PASSWORD', 'warning');
+            if (!username || !password) {
+                showError('registerError', 'Заполните имя пользователя и пароль');
                 return;
             }
 
             try {
-                const response = await fetch('/api/authenticate', {
+                const response = await fetch('/api/register', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
                     },
-                    body: JSON.stringify({ callsign, password })
+                    body: JSON.stringify({ username, email, password })
                 });
 
                 const data = await response.json();
 
-                if (response.ok && data.status === 'GRANTED') {
-                    currentOperative = data.operative;
-                    accessGranted();
+                if (response.ok) {
+                    currentUser = data.user;
+                    localStorage.setItem('local_messenger_user', JSON.stringify(currentUser));
+                    showMainInterface();
+                    connectToServer();
+                    showNotification('Регистрация успешна!');
                 } else {
-                    showAlert('ACCESS DENIED: INVALID CREDENTIALS', 'danger');
+                    showError('registerError', data.error);
                 }
             } catch (error) {
-                // Fallback to test data
-                const operative = testOperatives.find(op => op.callsign === callsign && op.password === password);
-                if (operative) {
-                    currentOperative = operative;
-                    accessGranted();
-                } else {
-                    showAlert('ACCESS DENIED: INVALID CREDENTIALS', 'danger');
-                }
+                showError('registerError', 'Ошибка соединения');
             }
         }
 
-        function accessGranted() {
-            document.getElementById('authScreen').classList.remove('active');
-            document.getElementById('mainScreen').classList.add('active');
-            
-            // Update UI with operative info
-            document.getElementById('currentCallsign').textContent = currentOperative.callsign;
-            document.getElementById('currentRank').textContent = currentOperative.rank;
-            document.getElementById('currentAvatar').textContent = currentOperative.avatar;
+        // Вход
+        async function login() {
+            const username = document.getElementById('loginUsername').value.trim();
+            const password = document.getElementById('loginPassword').value;
 
-            // Connect to comms
-            connectToComms();
-            showAlert('ACCESS GRANTED - WELCOME ' + currentOperative.callsign, 'success');
+            if (!username || !password) {
+                showError('loginError', 'Заполните все поля');
+                return;
+            }
+
+            try {
+                const response = await fetch('/api/login', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ username, password })
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    currentUser = data.user;
+                    localStorage.setItem('local_messenger_user', JSON.stringify(currentUser));
+                    showMainInterface();
+                    connectToServer();
+                    showNotification('Вход выполнен!');
+                } else {
+                    showError('loginError', data.error);
+                }
+            } catch (error) {
+                showError('loginError', 'Ошибка соединения');
+            }
         }
 
-        // Communications
-        function connectToComms() {
+        // Подключение к серверу
+        function connectToServer() {
             socket = io();
 
             socket.on('connect', () => {
-                document.getElementById('connectionStatus').textContent = 'COMMS ONLINE';
-                socket.emit('operative_login', currentOperative);
+                socket.emit('user_online', currentUser);
+                loadFriends();
+                loadChats();
             });
 
-            socket.on('message_history', (messages) => {
-                displayMessages(messages);
+            socket.on('new_private_message', (message) => {
+                if (currentChat && message.sender_id === currentChat.id) {
+                    addMessageToChat(message);
+                }
+                updateChatList(message);
             });
 
-            socket.on('new_message', (message) => {
-                addMessage(message);
+            socket.on('user_typing', (data) => {
+                if (currentChat && data.userId === currentChat.id) {
+                    showTypingIndicator(data.username);
+                }
             });
 
-            socket.on('operatives_update', (operatives) => {
-                updateOperatives(operatives);
+            socket.on('user_stop_typing', (data) => {
+                if (currentChat && data.userId === currentChat.id) {
+                    hideTypingIndicator();
+                }
             });
 
-            socket.on('typing_update', (typingOps) => {
-                updateTypingIndicator(typingOps);
-            });
-
-            socket.on('missions_update', (missions) => {
-                displayMissions(missions);
-            });
-
-            socket.on('equipment_update', (equipment) => {
-                displayEquipment(equipment);
-            });
-
-            socket.on('emergency_alert', (alert) => {
-                showEmergencyAlert(alert);
+            socket.on('online_users_update', (users) => {
+                updateOnlineStatuses(users);
             });
 
             socket.on('disconnect', () => {
-                document.getElementById('connectionStatus').textContent = 'COMMS OFFLINE';
-                showAlert('COMMUNICATIONS LOST', 'danger');
+                showNotification('Соединение потеряно');
             });
         }
 
-        // Message Handling
-        function sendMessage() {
-            const input = document.getElementById('messageInput');
-            const content = input.value.trim();
-
-            if (!content || !socket) return;
-
-            const messageData = {
-                content: content,
-                rank: currentOperative.rank,
-                type: 'TEXT',
-                priority: currentPriority,
-                channel: currentChannel
-            };
-
-            socket.emit('send_message', messageData);
-            input.value = '';
-            input.style.height = 'auto';
+        // Показать основной интерфейс
+        function showMainInterface() {
+            document.getElementById('authScreen').classList.remove('active');
+            document.getElementById('mainScreen').classList.add('active');
             
-            stopTyping();
+            document.getElementById('userName').textContent = currentUser.username;
+            document.getElementById('userAvatar').textContent = currentUser.avatar;
+            document.getElementById('profileName').textContent = currentUser.username;
+            document.getElementById('profileAvatar').textContent = currentUser.avatar;
+            document.getElementById('profileLevel').textContent = currentUser.level || 1;
         }
 
-        function addMessage(message) {
-            const container = document.getElementById('messagesContainer');
-            const messageDiv = document.createElement('div');
-            
-            messageDiv.className = 'message';
-            if (message.priority === 'HIGH') messageDiv.classList.add('priority-high');
-            if (message.priority === 'CRITICAL') messageDiv.classList.add('priority-critical');
-            if (message.type === 'SYSTEM' || message.callsign === 'COMMAND') messageDiv.classList.add('command');
-
-            const time = new Date(message.timestamp).toLocaleTimeString('ru-RU', {
-                hour: '2-digit',
-                minute: '2-digit'
-            });
-
-            messageDiv.innerHTML = `
-                <div class="message-header">
-                    <span class="message-callsign">${message.callsign} <span class="message-rank">${message.rank || ''}</span></span>
-                    <span class="message-time">${time}</span>
-                </div>
-                <div class="message-content">${message.content}</div>
-            `;
-
-            container.appendChild(messageDiv);
-            container.scrollTop = container.scrollHeight;
-        }
-
-        function displayMessages(messages) {
-            const container = document.getElementById('messagesContainer');
-            container.innerHTML = '';
-            messages.forEach(message => addMessage(message));
-        }
-
-        // Tab Management
+        // Показать вкладку
         function showTab(tabName) {
-            document.querySelectorAll('.military-tab').forEach(tab => {
+            document.querySelectorAll('.nav-tab').forEach(tab => {
                 tab.classList.toggle('active', tab.textContent === getTabName(tabName));
             });
 
@@ -1077,222 +908,333 @@
 
         function getTabName(tab) {
             const names = {
-                'comms': 'COMMUNICATIONS',
-                'missions': 'MISSIONS', 
-                'equipment': 'EQUIPMENT',
-                'operatives': 'OPERATIVES'
+                'chats': 'Чаты',
+                'contacts': 'Контакты', 
+                'profile': 'Профиль'
             };
             return names[tab];
         }
 
-        // Channel Management
-        function switchChannel(channel) {
-            currentChannel = channel;
-            document.querySelectorAll('.channel-btn').forEach(btn => {
-                btn.classList.toggle('active', btn.textContent === channel);
-            });
-            showAlert('SWITCHED TO ' + channel + ' CHANNEL', 'success');
-        }
-
-        // Priority Management
-        function setPriority(priority) {
-            currentPriority = priority;
-            document.querySelectorAll('.priority-btn').forEach(btn => {
-                btn.classList.toggle('active', btn.textContent === priority);
-            });
-        }
-
-        // Emergency Functions
-        function requestBackup() {
-            const reason = prompt('BACKUP REASON:');
-            if (reason) {
-                socket.emit('request_backup', {
-                    reason: reason,
-                    location: 'UNKNOWN'
-                });
-            }
-        }
-
-        function sendEmergency() {
-            const message = prompt('EMERGENCY MESSAGE:');
-            if (message) {
-                socket.emit('send_message', {
-                    content: '🚨 EMERGENCY: ' + message,
-                    rank: currentOperative.rank,
-                    type: 'EMERGENCY',
-                    priority: 'CRITICAL',
-                    channel: 'GLOBAL'
-                });
-            }
-        }
-
-        // Typing Indicator
-        function setupEventListeners() {
-            const messageInput = document.getElementById('messageInput');
-            
-            messageInput.addEventListener('input', function() {
-                this.style.height = 'auto';
-                this.style.height = Math.min(this.scrollHeight, 120) + 'px';
-
-                if (!isTyping) {
-                    isTyping = true;
-                    socket.emit('start_typing');
+        // Загрузка друзей
+        async function loadFriends() {
+            try {
+                const response = await fetch(`/api/users/${currentUser.id}/friends`);
+                if (response.ok) {
+                    friends = await response.json();
+                    displayFriends();
                 }
-
-                clearTimeout(typingTimer);
-                typingTimer = setTimeout(() => {
-                    stopTyping();
-                }, 1000);
-            });
-
-            messageInput.addEventListener('keypress', function(e) {
-                if (e.key === 'Enter' && !e.shiftKey) {
-                    e.preventDefault();
-                    sendMessage();
-                }
-            });
-        }
-
-        function stopTyping() {
-            if (isTyping) {
-                isTyping = false;
-                socket.emit('stop_typing');
+            } catch (error) {
+                console.error('Ошибка загрузки друзей:', error);
             }
         }
 
-        function updateTypingIndicator(typingOps) {
-            const indicator = document.getElementById('typingIndicator');
-            
-            if (typingOps.length > 0) {
-                const callsigns = typingOps.map(op => op.callsign).join(', ');
-                indicator.textContent = callsigns + ' IS TYPING...';
-                indicator.style.display = 'block';
-            } else {
-                indicator.style.display = 'none';
-            }
+        // Загрузка чатов
+        async function loadChats() {
+            // В реальном приложении здесь будет загрузка списка чатов
+            // Пока используем друзей как чаты
+            chats = friends;
+            displayChats();
         }
 
-        // Missions Display
-        function displayMissions(missions) {
-            const container = document.getElementById('missionsGrid');
+        // Отображение чатов
+        function displayChats() {
+            const container = document.getElementById('chatList');
             container.innerHTML = '';
 
-            missions.forEach(mission => {
-                const card = document.createElement('div');
-                card.className = 'mission-card';
-                if (mission.priority === 'HIGH') card.classList.add('priority-high');
-                if (mission.priority === 'CRITICAL') card.classList.add('priority-critical');
+            chats.forEach(chat => {
+                const chatItem = document.createElement('div');
+                chatItem.className = 'chat-item';
+                chatItem.onclick = () => openChat(chat);
 
-                card.innerHTML = `
-                    <div class="mission-header">
-                        <div class="mission-codename">${mission.codename}</div>
-                        <div class="mission-status ${mission.status.toLowerCase()}">${mission.status}</div>
+                chatItem.innerHTML = `
+                    <div class="chat-avatar">
+                        ${chat.avatar}
+                        ${chat.status === 'В сети' ? '<div class="online-dot"></div>' : ''}
                     </div>
-                    <div class="mission-details">${mission.objective}</div>
-                    <div class="mission-squad">
-                        <span>ASSIGNED: ${mission.squad}</span>
-                        <span>PRIORITY: ${mission.priority}</span>
+                    <div class="chat-content">
+                        <div class="chat-header">
+                            <div class="chat-name">${chat.username}</div>
+                            <div class="chat-time">${getLastSeen(chat.last_seen)}</div>
+                        </div>
+                        <div class="chat-preview">${chat.status || 'Не в сети'}</div>
                     </div>
                 `;
 
-                container.appendChild(card);
+                container.appendChild(chatItem);
             });
         }
 
-        // Equipment Display
-        function displayEquipment(equipment) {
-            const container = document.getElementById('equipmentList');
+        // Отображение друзей
+        function displayFriends() {
+            const container = document.getElementById('contactsList');
             container.innerHTML = '';
 
-            equipment.forEach(item => {
-                const card = document.createElement('div');
-                card.className = 'equipment-card';
+            friends.forEach(friend => {
+                const friendItem = document.createElement('div');
+                friendItem.className = 'chat-item';
+                friendItem.onclick = () => openChat(friend);
 
-                card.innerHTML = `
-                    <div class="equipment-name">${item.name}</div>
-                    <div class="equipment-status ${item.status.toLowerCase()}">${item.status}</div>
-                    <div class="equipment-type">TYPE: ${item.type}</div>
-                    <div class="equipment-assigned">UNIT: ${item.assignedTo}</div>
+                friendItem.innerHTML = `
+                    <div class="chat-avatar">
+                        ${friend.avatar}
+                        ${friend.status === 'В сети' ? '<div class="online-dot"></div>' : ''}
+                    </div>
+                    <div class="chat-content">
+                        <div class="chat-header">
+                            <div class="chat-name">${friend.username}</div>
+                            <div class="chat-time">Уровень ${friend.level || 1}</div>
+                        </div>
+                        <div class="chat-preview">${friend.status || 'Не в сети'}</div>
+                    </div>
                 `;
 
-                container.appendChild(card);
+                container.appendChild(friendItem);
             });
         }
 
-        // Operatives Display
-        function updateOperatives(operatives) {
-            const container = document.getElementById('operativesGrid');
-            container.innerHTML = '';
-
-            operatives.forEach(op => {
-                const card = document.createElement('div');
-                card.className = 'operative-card online';
-
-                card.innerHTML = `
-                    <div class="operative-avatar">${op.avatar}</div>
-                    <div class="operative-callsign">${op.callsign}</div>
-                    <div class="operative-rank">${op.rank}</div>
-                    <div class="operative-unit">${op.unit}</div>
-                    <div class="operative-status">ONLINE</div>
-                `;
-
-                container.appendChild(card);
-            });
-        }
-
-        // Alert System
-        function showAlert(message, type) {
-            const alert = document.createElement('div');
-            alert.className = 'emergency-alert';
-            alert.style.background = type === 'success' ? 'var(--success)' : 
-                                  type === 'warning' ? 'var(--warning)' : 'var(--danger)';
-            alert.textContent = message;
-
-            document.body.appendChild(alert);
-            setTimeout(() => {
-                document.body.removeChild(alert);
-            }, 3000);
-        }
-
-        function showEmergencyAlert(alert) {
-            showAlert(alert.content, 'danger');
+        // Открыть чат
+        async function openChat(user) {
+            currentChat = user;
             
-            // Add emergency message to chat
+            document.getElementById('mainScreen').classList.remove('active');
+            document.getElementById('chatScreen').classList.add('active');
+
+            document.getElementById('chatUserName').textContent = user.username;
+            document.getElementById('chatAvatar').textContent = user.avatar;
+            document.getElementById('chatUserStatus').textContent = user.status || 'Не в сети';
+
+            // Загружаем историю сообщений
+            await loadChatHistory(user.id);
+        }
+
+        // Закрыть чат
+        function closeChat() {
+            document.getElementById('chatScreen').classList.remove('active');
+            document.getElementById('mainScreen').classList.add('active');
+            currentChat = null;
+            hideTypingIndicator();
+        }
+
+        // Загрузка истории чата
+        async function loadChatHistory(friendId) {
+            try {
+                const response = await fetch(`/api/messages/${currentUser.id}/${friendId}`);
+                if (response.ok) {
+                    const messages = await response.json();
+                    displayMessages(messages);
+                }
+            } catch (error) {
+                console.error('Ошибка загрузки истории:', error);
+            }
+        }
+
+        // Отправка сообщения
+        function sendMessage() {
+            const input = document.getElementById('messageInput');
+            const content = input.value.trim();
+
+            if (!content || !socket || !currentChat) return;
+
+            socket.emit('send_private_message', {
+                receiverId: currentChat.id,
+                content: content
+            });
+
+            input.value = '';
+            input.style.height = 'auto';
+            
+            stopTyping();
+        }
+
+        // Добавление сообщения в чат
+        function addMessageToChat(message) {
             const container = document.getElementById('messagesContainer');
             const messageDiv = document.createElement('div');
-            messageDiv.className = 'message priority-critical';
             
-            const time = new Date(alert.timestamp).toLocaleTimeString('ru-RU', {
+            const isOutgoing = message.sender_id === currentUser.id;
+            messageDiv.className = `message ${isOutgoing ? 'outgoing' : 'incoming'}`;
+            
+            const time = new Date(message.created_at).toLocaleTimeString('ru-RU', {
                 hour: '2-digit',
                 minute: '2-digit'
             });
 
             messageDiv.innerHTML = `
-                <div class="message-header">
-                    <span class="message-callsign">${alert.callsign} <span class="message-rank">EMERGENCY</span></span>
-                    <span class="message-time">${time}</span>
-                </div>
-                <div class="message-content">${alert.content}</div>
+                <div class="message-content">${message.content}</div>
+                <div class="message-time">${time}</div>
             `;
 
             container.appendChild(messageDiv);
             container.scrollTop = container.scrollHeight;
         }
 
-        // Logout
-        function logout() {
-            if (confirm('CONFIRM LOGOUT?')) {
-                if (socket) {
-                    socket.disconnect();
+        // Отображение сообщений
+        function displayMessages(messages) {
+            const container = document.getElementById('messagesContainer');
+            container.innerHTML = '';
+            
+            messages.forEach(message => addMessageToChat(message));
+        }
+
+        // Поиск пользователей
+        async function searchAllUsers(query) {
+            if (query.length < 2) {
+                document.getElementById('userSearchResults').style.display = 'none';
+                return;
+            }
+
+            try {
+                const response = await fetch(`/api/users/search?query=${encodeURIComponent(query)}`);
+                if (response.ok) {
+                    const users = await response.json();
+                    displaySearchResults(users, 'userSearchResults');
                 }
-                currentOperative = null;
-                document.getElementById('mainScreen').classList.remove('active');
-                document.getElementById('authScreen').classList.add('active');
-                showAlert('LOGGED OUT - SYSTEM SECURE', 'success');
+            } catch (error) {
+                console.error('Ошибка поиска:', error);
             }
         }
 
-        console.log('🎖️ LOCAL MESSENGER - MILITARY COMMS SYSTEM LOADED');
+        // Отображение результатов поиска
+        function displaySearchResults(users, containerId) {
+            const container = document.getElementById(containerId);
+            container.innerHTML = '';
+
+            users.forEach(user => {
+                if (user.id === currentUser.id) return;
+
+                const item = document.createElement('div');
+                item.className = 'search-result-item';
+                item.onclick = () => {
+                    openChat(user);
+                    container.style.display = 'none';
+                };
+
+                item.innerHTML = `
+                    <div class="chat-avatar">
+                        ${user.avatar}
+                        ${user.status === 'В сети' ? '<div class="online-dot"></div>' : ''}
+                    </div>
+                    <div class="chat-name">${user.username}</div>
+                `;
+
+                container.appendChild(item);
+            });
+
+            container.style.display = users.length > 0 ? 'block' : 'none';
+        }
+
+        // Обработка набора сообщения
+        function handleTyping() {
+            if (socket && currentChat && !isTyping) {
+                isTyping = true;
+                socket.emit('typing_start', { receiverId: currentChat.id });
+            }
+
+            clearTimeout(typingTimer);
+            typingTimer = setTimeout(() => {
+                stopTyping();
+            }, 1000);
+        }
+
+        function stopTyping() {
+            if (isTyping && socket && currentChat) {
+                isTyping = false;
+                socket.emit('typing_stop', { receiverId: currentChat.id });
+            }
+        }
+
+        // Показать индикатор набора
+        function showTypingIndicator(username) {
+            const indicator = document.getElementById('typingIndicator');
+            indicator.textContent = `${username} печатает...`;
+            indicator.style.display = 'block';
+        }
+
+        function hideTypingIndicator() {
+            document.getElementById('typingIndicator').style.display = 'none';
+        }
+
+        // Обновление онлайн статусов
+        function updateOnlineStatuses(onlineUsers) {
+            // Обновляем статусы в списках чатов и контактов
+            displayChats();
+            displayFriends();
+        }
+
+        // Обновление списка чатов
+        function updateChatList(message) {
+            // В реальном приложении здесь будет обновление превью чата
+            displayChats();
+        }
+
+        // Вспомогательные функции
+        function getLastSeen(timestamp) {
+            if (!timestamp) return '';
+            const date = new Date(timestamp);
+            return date.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
+        }
+
+        function showError(elementId, message) {
+            const element = document.getElementById(elementId);
+            element.textContent = message;
+            element.style.display = 'block';
+            setTimeout(() => {
+                element.style.display = 'none';
+            }, 3000);
+        }
+
+        function showNotification(message) {
+            const notification = document.getElementById('notification');
+            notification.textContent = message;
+            notification.style.display = 'block';
+            setTimeout(() => {
+                notification.style.display = 'none';
+            }, 3000);
+        }
+
+        function toggleTheme() {
+            const isDark = document.body.getAttribute('data-theme') === 'dark';
+            document.body.setAttribute('data-theme', isDark ? 'light' : 'dark');
+            localStorage.setItem('local_messenger_theme', isDark ? 'light' : 'dark');
+        }
+
+        function searchUsers() {
+            showTab('contacts');
+            document.querySelector('.search-input').focus();
+        }
+
+        function showSettings() {
+            alert('Настройки в разработке');
+        }
+
+        function showFriends() {
+            alert('Управление друзьями в разработке');
+        }
+
+        // Выход
+        function logout() {
+            if (confirm('Выйти из аккаунта?')) {
+                if (socket) {
+                    socket.disconnect();
+                }
+                localStorage.removeItem('local_messenger_user');
+                currentUser = null;
+                document.getElementById('mainScreen').classList.remove('active');
+                document.getElementById('chatScreen').classList.remove('active');
+                document.getElementById('authScreen').classList.add('active');
+            }
+        }
+
+        // Загрузка темы
+        function loadTheme() {
+            const savedTheme = localStorage.getItem('local_messenger_theme') || 'light';
+            document.body.setAttribute('data-theme', savedTheme);
+        }
+
+        // Инициализация темы
+        loadTheme();
+
+        console.log('🚀 Local Messenger загружен');
     </script>
 </body>
 </html>
