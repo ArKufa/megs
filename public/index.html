@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Mobeil Messenger</title>
+    <title>LOCAL MESSENGER - MILITARY COMMS</title>
     <style>
         * {
             margin: 0;
@@ -13,45 +13,54 @@
         }
 
         :root {
-            --primary: #0088cc;
-            --primary-dark: #0077b3;
-            --secondary: #25d366;
-            --background: #ffffff;
-            --surface: #f0f0f0;
-            --card: #ffffff;
-            --border: #e6e6e6;
-            --text-primary: #000000;
-            --text-secondary: #667781;
-            --text-muted: #8696a0;
-            --message-out: #d9fdd3;
-            --message-in: #ffffff;
-            --online: #00c853;
-            --typing: #666;
-            --error: #ff4444;
-            --success: #00c853;
-        }
-
-        [data-theme="dark"] {
-            --background: #111b21;
-            --surface: #202c33;
-            --card: #1f2c33;
-            --border: #2a3942;
-            --text-primary: #e9edef;
-            --text-secondary: #8696a0;
-            --text-muted: #667781;
-            --message-out: #005c4b;
-            --message-in: #202c33;
+            --military-dark: #0a0f1c;
+            --military-darker: #050a14;
+            --military-green: #1a3c1a;
+            --military-olive: #4a5d23;
+            --military-sand: #8a7f6d;
+            --military-red: #8b0000;
+            --military-orange: #d35400;
+            --military-gold: #b8860b;
+            --text-primary: #e8e6e3;
+            --text-secondary: #b0b0b0;
+            --text-muted: #808080;
+            --border: #2a3c2a;
+            --success: #228b22;
+            --warning: #ff8c00;
+            --danger: #dc143c;
+            --command: #4169e1;
         }
 
         body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            background: var(--background);
+            font-family: 'Courier New', monospace;
+            background: var(--military-dark);
             color: var(--text-primary);
             height: 100vh;
             overflow: hidden;
+            background-image: 
+                radial-gradient(circle at 20% 30%, rgba(26, 60, 26, 0.3) 0%, transparent 50%),
+                radial-gradient(circle at 80% 70%, rgba(10, 15, 28, 0.4) 0%, transparent 50%);
         }
 
-        /* Контейнеры экранов */
+        /* Terminal-like scanlines effect */
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: repeating-linear-gradient(
+                0deg,
+                rgba(0, 0, 0, 0.03) 0px,
+                rgba(0, 0, 0, 0.03) 1px,
+                transparent 1px,
+                transparent 2px
+            );
+            pointer-events: none;
+            z-index: 1000;
+        }
+
         .screen {
             position: fixed;
             top: 0;
@@ -66,353 +75,450 @@
             display: flex;
         }
 
-        /* Авторизация */
+        /* Authentication Screen */
         .auth-screen {
-            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            background: linear-gradient(135deg, var(--military-darker), var(--military-green));
             justify-content: center;
             align-items: center;
             padding: 20px;
         }
 
-        .auth-container {
-            background: var(--card);
-            border-radius: 20px;
+        .auth-terminal {
+            background: rgba(10, 15, 28, 0.95);
+            border: 2px solid var(--military-olive);
+            border-radius: 8px;
             padding: 40px 30px;
             width: 100%;
-            max-width: 400px;
-            box-shadow: 0 10px 40px rgba(0,0,0,0.1);
+            max-width: 450px;
+            box-shadow: 0 0 30px rgba(26, 60, 26, 0.5);
+            position: relative;
         }
 
-        .app-logo {
+        .auth-terminal::before {
+            content: 'SECURE ACCESS TERMINAL';
+            position: absolute;
+            top: -12px;
+            left: 20px;
+            background: var(--military-green);
+            color: var(--text-primary);
+            padding: 4px 12px;
+            font-size: 12px;
+            font-weight: bold;
+            border: 1px solid var(--military-olive);
+        }
+
+        .military-logo {
             text-align: center;
             margin-bottom: 30px;
         }
 
-        .logo-icon {
+        .logo-badge {
             width: 80px;
             height: 80px;
-            background: linear-gradient(135deg, var(--primary), var(--secondary));
-            border-radius: 20px;
+            background: var(--military-green);
+            border: 3px solid var(--military-gold);
+            border-radius: 50%;
             display: flex;
             align-items: center;
             justify-content: center;
             margin: 0 auto 20px;
-            color: white;
+            color: var(--military-gold);
             font-size: 32px;
             font-weight: bold;
         }
 
         .app-title {
             font-size: 28px;
-            font-weight: 300;
+            font-weight: bold;
             margin-bottom: 8px;
+            color: var(--military-gold);
+            text-transform: uppercase;
+            letter-spacing: 2px;
         }
 
         .app-subtitle {
             color: var(--text-secondary);
-            font-size: 16px;
-        }
-
-        .auth-tabs {
-            display: flex;
-            background: var(--surface);
-            border-radius: 12px;
-            padding: 4px;
-            margin-bottom: 24px;
-        }
-
-        .auth-tab {
-            flex: 1;
-            padding: 12px;
-            border: none;
-            background: transparent;
-            border-radius: 8px;
-            color: var(--text-secondary);
-            font-size: 16px;
-            cursor: pointer;
-        }
-
-        .auth-tab.active {
-            background: var(--card);
-            color: var(--text-primary);
-            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            font-size: 14px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
         }
 
         .form-group {
             margin-bottom: 20px;
+            position: relative;
+        }
+
+        .form-label {
+            display: block;
+            margin-bottom: 8px;
+            color: var(--text-secondary);
+            font-size: 14px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
         }
 
         .form-input {
             width: 100%;
-            padding: 16px;
-            border: 1px solid var(--border);
-            border-radius: 12px;
-            background: var(--background);
+            padding: 14px 16px;
+            background: rgba(26, 60, 26, 0.3);
+            border: 1px solid var(--military-olive);
+            border-radius: 4px;
             color: var(--text-primary);
+            font-family: 'Courier New', monospace;
             font-size: 16px;
+            transition: all 0.3s ease;
         }
 
         .form-input:focus {
             outline: none;
-            border-color: var(--primary);
+            border-color: var(--military-gold);
+            box-shadow: 0 0 10px rgba(184, 134, 11, 0.3);
         }
 
         .auth-button {
             width: 100%;
             padding: 16px;
-            background: var(--primary);
-            color: white;
-            border: none;
-            border-radius: 12px;
+            background: linear-gradient(135deg, var(--military-green), var(--military-olive));
+            border: 1px solid var(--military-gold);
+            border-radius: 4px;
+            color: var(--text-primary);
+            font-family: 'Courier New', monospace;
             font-size: 16px;
-            font-weight: 600;
+            font-weight: bold;
+            text-transform: uppercase;
+            letter-spacing: 1px;
             cursor: pointer;
-            margin-top: 10px;
+            transition: all 0.3s ease;
         }
 
         .auth-button:hover {
-            background: var(--primary-dark);
+            background: linear-gradient(135deg, var(--military-olive), var(--military-green));
+            box-shadow: 0 0 20px rgba(184, 134, 11, 0.4);
         }
 
-        /* Основной интерфейс */
+        .operative-select {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        .operative-card {
+            background: rgba(26, 60, 26, 0.3);
+            border: 1px solid var(--military-olive);
+            border-radius: 4px;
+            padding: 12px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .operative-card:hover {
+            border-color: var(--military-gold);
+            background: rgba(184, 134, 11, 0.1);
+        }
+
+        .operative-card.active {
+            border-color: var(--military-gold);
+            background: rgba(184, 134, 11, 0.2);
+        }
+
+        .operative-avatar {
+            font-size: 24px;
+            margin-bottom: 8px;
+        }
+
+        .operative-callsign {
+            font-weight: bold;
+            font-size: 14px;
+        }
+
+        .operative-rank {
+            font-size: 12px;
+            color: var(--text-secondary);
+        }
+
+        /* Main Interface */
         .main-screen {
-            background: var(--background);
+            background: var(--military-dark);
         }
 
-        /* Header */
-        .header {
-            background: var(--surface);
-            padding: 15px 20px;
-            border-bottom: 1px solid var(--border);
+        /* Military Header */
+        .military-header {
+            background: rgba(10, 15, 28, 0.95);
+            border-bottom: 2px solid var(--military-olive);
+            padding: 12px 20px;
             display: flex;
             justify-content: space-between;
             align-items: center;
+            position: relative;
         }
 
-        .user-info {
+        .header-left {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .operative-badge {
             display: flex;
             align-items: center;
             gap: 12px;
+            padding: 8px 16px;
+            background: rgba(26, 60, 26, 0.3);
+            border: 1px solid var(--military-olive);
+            border-radius: 4px;
         }
 
-        .user-avatar {
+        .operative-avatar {
             width: 40px;
             height: 40px;
+            background: var(--military-green);
+            border: 2px solid var(--military-gold);
             border-radius: 50%;
-            background: var(--primary);
             display: flex;
             align-items: center;
             justify-content: center;
-            color: white;
             font-weight: bold;
         }
 
-        .user-details h2 {
+        .operative-info h2 {
             font-size: 16px;
             margin-bottom: 2px;
+            color: var(--military-gold);
         }
 
-        .user-status {
-            font-size: 13px;
+        .operative-info .rank {
+            font-size: 12px;
             color: var(--text-secondary);
+            text-transform: uppercase;
         }
 
-        .status.online::before {
+        .status-indicator {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 12px;
+            color: var(--success);
+        }
+
+        .status-indicator::before {
             content: '';
-            display: inline-block;
             width: 8px;
             height: 8px;
-            background: var(--online);
+            background: var(--success);
             border-radius: 50%;
-            margin-right: 6px;
+            animation: pulse 2s infinite;
         }
 
-        .header-actions {
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        .header-right {
             display: flex;
-            gap: 15px;
+            gap: 10px;
         }
 
-        .header-button {
+        .military-button {
+            padding: 8px 16px;
+            background: rgba(26, 60, 26, 0.3);
+            border: 1px solid var(--military-olive);
+            border-radius: 4px;
+            color: var(--text-primary);
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .military-button:hover {
+            border-color: var(--military-gold);
+            background: rgba(184, 134, 11, 0.1);
+        }
+
+        /* Military Tabs */
+        .military-tabs {
+            display: flex;
+            background: rgba(10, 15, 28, 0.8);
+            border-bottom: 1px solid var(--military-olive);
+        }
+
+        .military-tab {
+            flex: 1;
+            padding: 15px 0;
             background: none;
             border: none;
-            font-size: 20px;
+            border-bottom: 3px solid transparent;
             color: var(--text-secondary);
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
             cursor: pointer;
-            padding: 8px;
+            transition: all 0.3s ease;
         }
 
-        /* Список чатов */
-        .chats-container {
+        .military-tab.active {
+            color: var(--military-gold);
+            border-bottom-color: var(--military-gold);
+            background: rgba(184, 134, 11, 0.1);
+        }
+
+        /* Tab Content */
+        .tab-content {
             flex: 1;
-            overflow-y: auto;
+            overflow: hidden;
+            display: none;
         }
 
-        .search-box {
-            padding: 15px 20px;
-            border-bottom: 1px solid var(--border);
-        }
-
-        .search-input {
-            width: 100%;
-            padding: 12px 20px;
-            border: none;
-            border-radius: 20px;
-            background: var(--surface);
-            color: var(--text-primary);
-            font-size: 15px;
-        }
-
-        .search-input:focus {
-            outline: none;
-        }
-
-        .chat-list {
-            padding: 10px 0;
-        }
-
-        .chat-item {
+        .tab-content.active {
             display: flex;
-            align-items: center;
-            padding: 15px 20px;
-            gap: 15px;
-            cursor: pointer;
-            border-bottom: 1px solid var(--border);
+            flex-direction: column;
         }
 
-        .chat-item:hover {
-            background: var(--surface);
-        }
-
-        .chat-avatar {
-            width: 50px;
-            height: 50px;
-            border-radius: 50%;
-            background: var(--primary);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: white;
-            font-weight: bold;
-            font-size: 18px;
-        }
-
-        .chat-content {
+        /* Communications Tab */
+        .comms-terminal {
             flex: 1;
+            display: flex;
+            flex-direction: column;
+            background: rgba(5, 10, 20, 0.8);
+            border: 1px solid var(--military-olive);
+            margin: 10px;
+            border-radius: 4px;
         }
 
-        .chat-header {
+        .terminal-header {
+            background: var(--military-green);
+            padding: 10px 15px;
+            border-bottom: 1px solid var(--military-olive);
             display: flex;
             justify-content: space-between;
-            margin-bottom: 5px;
-        }
-
-        .chat-name {
-            font-weight: 600;
-            font-size: 16px;
-        }
-
-        .chat-time {
-            font-size: 12px;
-            color: var(--text-muted);
-        }
-
-        .chat-preview {
-            font-size: 14px;
-            color: var(--text-secondary);
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-        }
-
-        /* Чат */
-        .chat-screen {
-            background: var(--background);
-        }
-
-        .chat-header {
-            background: var(--surface);
-            padding: 15px 20px;
-            border-bottom: 1px solid var(--border);
-            display: flex;
             align-items: center;
-            gap: 15px;
         }
 
-        .back-button {
-            background: none;
-            border: none;
-            font-size: 20px;
-            color: var(--primary);
+        .terminal-title {
+            font-weight: bold;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .channel-selector {
+            display: flex;
+            gap: 10px;
+        }
+
+        .channel-btn {
+            padding: 4px 12px;
+            background: rgba(10, 15, 28, 0.6);
+            border: 1px solid var(--military-olive);
+            border-radius: 3px;
+            color: var(--text-secondary);
+            font-size: 11px;
             cursor: pointer;
+        }
+
+        .channel-btn.active {
+            background: var(--military-gold);
+            color: var(--military-dark);
+            border-color: var(--military-gold);
         }
 
         .messages-container {
             flex: 1;
             overflow-y: auto;
-            padding: 20px;
+            padding: 15px;
             display: flex;
             flex-direction: column;
-            gap: 10px;
+            gap: 8px;
         }
 
         .message {
-            max-width: 70%;
-            padding: 12px 16px;
-            border-radius: 18px;
-            position: relative;
-            word-wrap: break-word;
+            padding: 10px 12px;
+            border-radius: 4px;
+            border-left: 3px solid var(--military-olive);
+            background: rgba(26, 60, 26, 0.2);
+            animation: messageAppear 0.3s ease;
         }
 
-        .message.outgoing {
-            background: var(--message-out);
-            align-self: flex-end;
-            border-bottom-right-radius: 6px;
+        @keyframes messageAppear {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
         }
 
-        .message.incoming {
-            background: var(--message-in);
-            align-self: flex-start;
-            border: 1px solid var(--border);
-            border-bottom-left-radius: 6px;
+        .message.priority-high {
+            border-left-color: var(--warning);
+            background: rgba(255, 140, 0, 0.1);
         }
 
-        .message-content {
-            font-size: 15px;
-            line-height: 1.4;
+        .message.priority-critical {
+            border-left-color: var(--danger);
+            background: rgba(220, 20, 60, 0.1);
+            animation: alertPulse 2s infinite;
+        }
+
+        @keyframes alertPulse {
+            0%, 100% { background: rgba(220, 20, 60, 0.1); }
+            50% { background: rgba(220, 20, 60, 0.2); }
+        }
+
+        .message.command {
+            border-left-color: var(--command);
+            background: rgba(65, 105, 225, 0.1);
+        }
+
+        .message-header {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 4px;
+            font-size: 12px;
+        }
+
+        .message-callsign {
+            font-weight: bold;
+            color: var(--military-gold);
+        }
+
+        .message-rank {
+            color: var(--text-secondary);
+            margin-right: 8px;
         }
 
         .message-time {
-            font-size: 11px;
             color: var(--text-muted);
-            text-align: right;
-            margin-top: 5px;
+            font-size: 11px;
         }
 
-        .typing-indicator {
-            padding: 10px 20px;
-            color: var(--typing);
-            font-style: italic;
+        .message-content {
             font-size: 14px;
-            display: none;
+            line-height: 1.4;
         }
 
         .input-container {
-            padding: 15px 20px;
-            background: var(--surface);
-            border-top: 1px solid var(--border);
+            padding: 15px;
+            background: rgba(10, 15, 28, 0.8);
+            border-top: 1px solid var(--military-olive);
             display: flex;
-            gap: 12px;
+            gap: 10px;
             align-items: flex-end;
         }
 
         .message-input {
             flex: 1;
-            padding: 12px 18px;
-            border: 1px solid var(--border);
-            border-radius: 24px;
-            background: var(--background);
+            padding: 12px 16px;
+            background: rgba(26, 60, 26, 0.3);
+            border: 1px solid var(--military-olive);
+            border-radius: 4px;
             color: var(--text-primary);
-            font-size: 15px;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
             resize: none;
             max-height: 120px;
             min-height: 44px;
@@ -421,253 +527,453 @@
 
         .message-input:focus {
             outline: none;
-            border-color: var(--primary);
+            border-color: var(--military-gold);
         }
 
         .send-button {
-            width: 44px;
-            height: 44px;
-            background: var(--primary);
-            border: none;
-            border-radius: 50%;
-            color: white;
+            padding: 12px 20px;
+            background: var(--military-green);
+            border: 1px solid var(--military-olive);
+            border-radius: 4px;
+            color: var(--text-primary);
+            font-family: 'Courier New', monospace;
+            font-weight: bold;
             cursor: pointer;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 18px;
+            transition: all 0.3s ease;
         }
 
         .send-button:hover {
-            background: var(--primary-dark);
+            background: var(--military-olive);
+            border-color: var(--military-gold);
         }
 
-        /* Утилиты */
+        .priority-selector {
+            display: flex;
+            gap: 5px;
+        }
+
+        .priority-btn {
+            padding: 6px 10px;
+            background: rgba(26, 60, 26, 0.3);
+            border: 1px solid var(--military-olive);
+            border-radius: 3px;
+            color: var(--text-secondary);
+            font-size: 11px;
+            cursor: pointer;
+        }
+
+        .priority-btn.active {
+            background: var(--warning);
+            color: var(--military-dark);
+            border-color: var(--warning);
+        }
+
+        /* Missions Tab */
+        .missions-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 15px;
+            padding: 15px;
+        }
+
+        .mission-card {
+            background: rgba(26, 60, 26, 0.3);
+            border: 1px solid var(--military-olive);
+            border-radius: 4px;
+            padding: 15px;
+            position: relative;
+        }
+
+        .mission-card.priority-high {
+            border-color: var(--warning);
+        }
+
+        .mission-card.priority-critical {
+            border-color: var(--danger);
+        }
+
+        .mission-header {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 10px;
+        }
+
+        .mission-codename {
+            font-weight: bold;
+            color: var(--military-gold);
+            font-size: 16px;
+        }
+
+        .mission-status {
+            padding: 4px 8px;
+            background: var(--success);
+            border-radius: 3px;
+            font-size: 11px;
+            font-weight: bold;
+        }
+
+        .mission-status.planning {
+            background: var(--warning);
+        }
+
+        .mission-status.active {
+            background: var(--success);
+        }
+
+        .mission-details {
+            font-size: 13px;
+            color: var(--text-secondary);
+            margin-bottom: 10px;
+        }
+
+        .mission-squad {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 12px;
+            color: var(--text-muted);
+        }
+
+        /* Equipment Tab */
+        .equipment-list {
+            padding: 15px;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 12px;
+        }
+
+        .equipment-card {
+            background: rgba(26, 60, 26, 0.3);
+            border: 1px solid var(--military-olive);
+            border-radius: 4px;
+            padding: 12px;
+        }
+
+        .equipment-name {
+            font-weight: bold;
+            margin-bottom: 8px;
+            color: var(--military-gold);
+        }
+
+        .equipment-status {
+            display: inline-block;
+            padding: 2px 8px;
+            background: var(--success);
+            border-radius: 3px;
+            font-size: 11px;
+            margin-bottom: 8px;
+        }
+
+        .equipment-status.maintenance {
+            background: var(--warning);
+        }
+
+        .equipment-status.offline {
+            background: var(--danger);
+        }
+
+        /* Operatives Tab */
+        .operatives-grid {
+            padding: 15px;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 12px;
+        }
+
+        .operative-card {
+            background: rgba(26, 60, 26, 0.3);
+            border: 1px solid var(--military-olive);
+            border-radius: 4px;
+            padding: 12px;
+            text-align: center;
+        }
+
+        .operative-card.online {
+            border-color: var(--success);
+        }
+
+        .operative-avatar {
+            font-size: 24px;
+            margin-bottom: 8px;
+        }
+
+        .operative-callsign {
+            font-weight: bold;
+            margin-bottom: 4px;
+            color: var(--military-gold);
+        }
+
+        .operative-unit {
+            font-size: 12px;
+            color: var(--text-secondary);
+            margin-bottom: 4px;
+        }
+
+        .operative-status {
+            font-size: 11px;
+            color: var(--success);
+        }
+
+        /* Utility */
         .hidden {
             display: none !important;
         }
 
-        .error-message {
-            color: var(--error);
-            font-size: 14px;
-            text-align: center;
-            margin-top: 10px;
+        .typing-indicator {
+            padding: 8px 15px;
+            color: var(--text-muted);
+            font-style: italic;
+            font-size: 12px;
             display: none;
+        }
+
+        .emergency-alert {
+            position: fixed;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: var(--danger);
+            color: white;
+            padding: 15px 20px;
+            border-radius: 4px;
+            z-index: 10000;
+            animation: emergencyPulse 1s infinite;
+            text-align: center;
+        }
+
+        @keyframes emergencyPulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.7; }
         }
     </style>
 </head>
 <body>
-    <!-- Экран авторизации -->
+    <!-- Authentication Screen -->
     <div class="screen auth-screen active" id="authScreen">
-        <div class="auth-container">
-            <div class="app-logo">
-                <div class="logo-icon">M</div>
-                <h1 class="app-title">Mobeil Messenger</h1>
-                <p class="app-subtitle">Быстрое и безопасное общение</p>
+        <div class="auth-terminal">
+            <div class="military-logo">
+                <div class="logo-badge">LM</div>
+                <h1 class="app-title">LOCAL MESSENGER</h1>
+                <p class="app-subtitle">MILITARY COMMUNICATIONS SYSTEM</p>
             </div>
 
-            <div class="auth-tabs">
-                <button class="auth-tab active" onclick="showAuthTab('login')">Вход</button>
-                <button class="auth-tab" onclick="showAuthTab('register')">Регистрация</button>
+            <div class="operative-select" id="operativeSelect">
+                <!-- Operatives will be loaded here -->
             </div>
 
-            <!-- Форма входа -->
-            <div id="loginForm">
-                <div class="form-group">
-                    <input type="text" class="form-input" id="loginUsername" placeholder="Имя пользователя" value="user1">
-                </div>
-                <div class="form-group">
-                    <input type="password" class="form-input" id="loginPassword" placeholder="Пароль" value="123">
-                </div>
-                <button class="auth-button" onclick="login()">Войти в чат</button>
-                <div class="error-message" id="loginError"></div>
+            <div class="form-group">
+                <label class="form-label">CALLSIGN</label>
+                <input type="text" class="form-input" id="loginCallsign" placeholder="ENTER CALLSIGN" value="HAWK">
             </div>
-
-            <!-- Форма регистрации -->
-            <div id="registerForm" class="hidden">
-                <div class="form-group">
-                    <input type="text" class="form-input" id="registerUsername" placeholder="Имя пользователя">
-                </div>
-                <div class="form-group">
-                    <input type="password" class="form-input" id="registerPassword" placeholder="Пароль">
-                </div>
-                <div class="form-group">
-                    <input type="tel" class="form-input" id="registerPhone" placeholder="Телефон (необязательно)">
-                </div>
-                <button class="auth-button" onclick="register()">Создать аккаунт</button>
-                <div class="error-message" id="registerError"></div>
+            <div class="form-group">
+                <label class="form-label">PASSWORD</label>
+                <input type="password" class="form-input" id="loginPassword" placeholder="ENTER PASSWORD" value="123">
             </div>
+            <button class="auth-button" onclick="authenticate()">ACCESS TERMINAL</button>
         </div>
     </div>
 
-    <!-- Основной интерфейс -->
+    <!-- Main Interface -->
     <div class="screen main-screen" id="mainScreen">
-        <div class="header">
-            <div class="user-info">
-                <div class="user-avatar" id="userAvatar">U</div>
-                <div class="user-details">
-                    <h2 id="userName">Пользователь</h2>
-                    <div class="user-status status online" id="userStatus">Общий чат • 0 онлайн</div>
-                </div>
-            </div>
-            <div class="header-actions">
-                <button class="header-button" onclick="toggleTheme()">🌙</button>
-                <button class="header-button" onclick="logout()">🚪</button>
-            </div>
-        </div>
-
-        <div class="chats-container">
-            <div class="search-box">
-                <input type="text" class="search-input" placeholder="Поиск...">
-            </div>
-            <div class="chat-list">
-                <div class="chat-item" onclick="openChat('general')">
-                    <div class="chat-avatar">G</div>
-                    <div class="chat-content">
-                        <div class="chat-header">
-                            <div class="chat-name">Общий чат</div>
-                            <div class="chat-time" id="lastMessageTime">--:--</div>
-                        </div>
-                        <div class="chat-preview" id="lastMessagePreview">Начните общение!</div>
+        <!-- Military Header -->
+        <div class="military-header">
+            <div class="header-left">
+                <div class="operative-badge">
+                    <div class="operative-avatar" id="currentAvatar">🦅</div>
+                    <div class="operative-info">
+                        <h2 id="currentCallsign">HAWK</h2>
+                        <div class="rank" id="currentRank">CAPTAIN</div>
                     </div>
                 </div>
+                <div class="status-indicator" id="connectionStatus">COMMS ONLINE</div>
             </div>
-        </div>
-    </div>
-
-    <!-- Экран чата -->
-    <div class="screen chat-screen" id="chatScreen">
-        <div class="chat-header">
-            <button class="back-button" onclick="closeChat()">←</button>
-            <div class="user-avatar">G</div>
-            <div class="user-details">
-                <h2>Общий чат</h2>
-                <div class="user-status" id="chatStatus">0 участников онлайн</div>
+            <div class="header-right">
+                <button class="military-button" onclick="requestBackup()">🚨 BACKUP</button>
+                <button class="military-button" onclick="sendEmergency()">⚠️ ALERT</button>
+                <button class="military-button" onclick="logout()">LOGOUT</button>
             </div>
         </div>
 
-        <div class="messages-container" id="messagesContainer">
-            <div class="message incoming">
-                <div class="message-content">Добро пожаловать в общий чат!</div>
-                <div class="message-time">12:00</div>
+        <!-- Military Tabs -->
+        <div class="military-tabs">
+            <button class="military-tab active" onclick="showTab('comms')">COMMUNICATIONS</button>
+            <button class="military-tab" onclick="showTab('missions')">MISSIONS</button>
+            <button class="military-tab" onclick="showTab('equipment')">EQUIPMENT</button>
+            <button class="military-tab" onclick="showTab('operatives')">OPERATIVES</button>
+        </div>
+
+        <!-- Communications Tab -->
+        <div class="tab-content active" id="commsTab">
+            <div class="comms-terminal">
+                <div class="terminal-header">
+                    <div class="terminal-title">SECURE COMMS CHANNEL</div>
+                    <div class="channel-selector">
+                        <button class="channel-btn active" onclick="switchChannel('GLOBAL')">GLOBAL</button>
+                        <button class="channel-btn" onclick="switchChannel('UNIT')">UNIT</button>
+                        <button class="channel-btn" onclick="switchChannel('COMMAND')">COMMAND</button>
+                    </div>
+                </div>
+                <div class="messages-container" id="messagesContainer">
+                    <div class="message command">
+                        <div class="message-header">
+                            <span class="message-callsign">COMMAND</span>
+                            <span class="message-time">06:00:00</span>
+                        </div>
+                        <div class="message-content">
+                            LOCAL MESSENGER SYSTEM OPERATIONAL. ALL UNITS REPORT STATUS.
+                        </div>
+                    </div>
+                </div>
+                <div class="typing-indicator" id="typingIndicator"></div>
+                <div class="input-container">
+                    <div class="priority-selector">
+                        <button class="priority-btn" onclick="setPriority('NORMAL')">NORMAL</button>
+                        <button class="priority-btn" onclick="setPriority('HIGH')">HIGH</button>
+                        <button class="priority-btn" onclick="setPriority('CRITICAL')">CRITICAL</button>
+                    </div>
+                    <textarea class="message-input" id="messageInput" placeholder="ENTER MESSAGE..." rows="1"></textarea>
+                    <button class="send-button" onclick="sendMessage()">SEND</button>
+                </div>
             </div>
         </div>
 
-        <div class="typing-indicator" id="typingIndicator">
-            Кто-то печатает...
+        <!-- Missions Tab -->
+        <div class="tab-content" id="missionsTab">
+            <div class="missions-grid" id="missionsGrid">
+                <!-- Missions will be loaded here -->
+            </div>
         </div>
 
-        <div class="input-container">
-            <textarea class="message-input" id="messageInput" placeholder="Введите сообщение..." rows="1"></textarea>
-            <button class="send-button" onclick="sendMessage()">↑</button>
+        <!-- Equipment Tab -->
+        <div class="tab-content" id="equipmentTab">
+            <div class="equipment-list" id="equipmentList">
+                <!-- Equipment will be loaded here -->
+            </div>
+        </div>
+
+        <!-- Operatives Tab -->
+        <div class="tab-content" id="operativesTab">
+            <div class="operatives-grid" id="operativesGrid">
+                <!-- Operatives will be loaded here -->
+            </div>
         </div>
     </div>
 
     <script src="/socket.io/socket.io.js"></script>
     <script>
-        // Глобальные переменные
+        // Military Global Variables
         let socket = null;
-        let currentUser = null;
+        let currentOperative = null;
+        let currentChannel = 'GLOBAL';
+        let currentPriority = 'NORMAL';
         let isTyping = false;
         let typingTimer = null;
 
-        // Показать таб авторизации
-        function showAuthTab(tab) {
-            document.getElementById('loginForm').classList.toggle('hidden', tab !== 'login');
-            document.getElementById('registerForm').classList.toggle('hidden', tab !== 'register');
-            
-            // Обновляем активные кнопки
-            document.querySelectorAll('.auth-tab').forEach(button => {
-                button.classList.toggle('active', 
-                    (tab === 'login' && button.textContent === 'Вход') ||
-                    (tab === 'register' && button.textContent === 'Регистрация')
-                );
+        // Test Operatives Data
+        const testOperatives = [
+            { id: 'cmd_001', callsign: 'COMMAND', rank: 'COMMANDER', unit: 'COMMAND', password: '123', avatar: '⚡' },
+            { id: 'alpha_001', callsign: 'HAWK', rank: 'CAPTAIN', unit: 'ALPHA', password: '123', avatar: '🦅' },
+            { id: 'bravo_001', callsign: 'WOLF', rank: 'LIEUTENANT', unit: 'BRAVO', password: '123', avatar: '🐺' },
+            { id: 'charlie_001', callsign: 'BEAR', rank: 'SERGEANT', unit: 'CHARLIE', password: '123', avatar: '🐻' },
+            { id: 'delta_001', callsign: 'FOX', rank: 'SPECIALIST', unit: 'DELTA', password: '123', avatar: '🦊' }
+        ];
+
+        // Initialize the interface
+        document.addEventListener('DOMContentLoaded', function() {
+            loadOperatives();
+            setupEventListeners();
+        });
+
+        // Load operative selection
+        function loadOperatives() {
+            const container = document.getElementById('operativeSelect');
+            container.innerHTML = '';
+
+            testOperatives.forEach(op => {
+                const card = document.createElement('div');
+                card.className = 'operative-card';
+                card.onclick = () => selectOperative(op.callsign);
+                
+                card.innerHTML = `
+                    <div class="operative-avatar">${op.avatar}</div>
+                    <div class="operative-callsign">${op.callsign}</div>
+                    <div class="operative-rank">${op.rank}</div>
+                    <div class="operative-unit">${op.unit}</div>
+                `;
+
+                container.appendChild(card);
             });
         }
 
-        // Регистрация
-        async function register() {
-            const username = document.getElementById('registerUsername').value.trim();
-            const password = document.getElementById('registerPassword').value;
-            const phone = document.getElementById('registerPhone').value.trim();
-
-            if (!username || !password) {
-                showError('registerError', 'Заполните все поля');
-                return;
-            }
-
-            try {
-                const response = await fetch('/api/register', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({ username, password, phone })
-                });
-
-                const data = await response.json();
-
-                if (response.ok) {
-                    currentUser = data.user;
-                    showMainInterface();
-                    connectToChat();
-                } else {
-                    showError('registerError', data.error);
-                }
-            } catch (error) {
-                showError('registerError', 'Ошибка соединения');
-            }
+        function selectOperative(callsign) {
+            document.querySelectorAll('.operative-card').forEach(card => {
+                card.classList.remove('active');
+            });
+            
+            event.target.closest('.operative-card').classList.add('active');
+            document.getElementById('loginCallsign').value = callsign;
         }
 
-        // Вход
-        async function login() {
-            const username = document.getElementById('loginUsername').value.trim();
+        // Authentication
+        async function authenticate() {
+            const callsign = document.getElementById('loginCallsign').value.trim();
             const password = document.getElementById('loginPassword').value;
 
-            if (!username || !password) {
-                showError('loginError', 'Заполните все поля');
+            if (!callsign || !password) {
+                showAlert('ENTER CALLSIGN AND PASSWORD', 'warning');
                 return;
             }
 
             try {
-                const response = await fetch('/api/login', {
+                const response = await fetch('/api/authenticate', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
                     },
-                    body: JSON.stringify({ username, password })
+                    body: JSON.stringify({ callsign, password })
                 });
 
                 const data = await response.json();
 
-                if (response.ok) {
-                    currentUser = data.user;
-                    showMainInterface();
-                    connectToChat();
+                if (response.ok && data.status === 'GRANTED') {
+                    currentOperative = data.operative;
+                    accessGranted();
                 } else {
-                    showError('loginError', data.error);
+                    showAlert('ACCESS DENIED: INVALID CREDENTIALS', 'danger');
                 }
             } catch (error) {
-                // Если сервер недоступен, используем демо-режим
-                currentUser = {
-                    id: 'demo_' + Date.now(),
-                    username: username,
-                    avatar: username.charAt(0).toUpperCase()
-                };
-                showMainInterface();
-                connectToChat();
+                // Fallback to test data
+                const operative = testOperatives.find(op => op.callsign === callsign && op.password === password);
+                if (operative) {
+                    currentOperative = operative;
+                    accessGranted();
+                } else {
+                    showAlert('ACCESS DENIED: INVALID CREDENTIALS', 'danger');
+                }
             }
         }
 
-        // Подключение к чату
-        function connectToChat() {
+        function accessGranted() {
+            document.getElementById('authScreen').classList.remove('active');
+            document.getElementById('mainScreen').classList.add('active');
+            
+            // Update UI with operative info
+            document.getElementById('currentCallsign').textContent = currentOperative.callsign;
+            document.getElementById('currentRank').textContent = currentOperative.rank;
+            document.getElementById('currentAvatar').textContent = currentOperative.avatar;
+
+            // Connect to comms
+            connectToComms();
+            showAlert('ACCESS GRANTED - WELCOME ' + currentOperative.callsign, 'success');
+        }
+
+        // Communications
+        function connectToComms() {
             socket = io();
 
             socket.on('connect', () => {
-                console.log('✅ Подключено к серверу');
-                
-                // Регистрируем пользователя
-                socket.emit('user_login', currentUser);
+                document.getElementById('connectionStatus').textContent = 'COMMS ONLINE';
+                socket.emit('operative_login', currentOperative);
             });
 
             socket.on('message_history', (messages) => {
@@ -676,205 +982,317 @@
 
             socket.on('new_message', (message) => {
                 addMessage(message);
-                updateLastMessage(message);
             });
 
-            socket.on('online_users', (users) => {
-                updateOnlineCount(users.length);
+            socket.on('operatives_update', (operatives) => {
+                updateOperatives(operatives);
             });
 
-            socket.on('user_typing', (typingUsers) => {
-                updateTypingIndicator(typingUsers);
+            socket.on('typing_update', (typingOps) => {
+                updateTypingIndicator(typingOps);
+            });
+
+            socket.on('missions_update', (missions) => {
+                displayMissions(missions);
+            });
+
+            socket.on('equipment_update', (equipment) => {
+                displayEquipment(equipment);
+            });
+
+            socket.on('emergency_alert', (alert) => {
+                showEmergencyAlert(alert);
             });
 
             socket.on('disconnect', () => {
-                console.log('❌ Отключено от сервера');
+                document.getElementById('connectionStatus').textContent = 'COMMS OFFLINE';
+                showAlert('COMMUNICATIONS LOST', 'danger');
             });
         }
 
-        // Показать основной интерфейс
-        function showMainInterface() {
-            document.getElementById('authScreen').classList.remove('active');
-            document.getElementById('mainScreen').classList.add('active');
-            
-            document.getElementById('userName').textContent = currentUser.username;
-            document.getElementById('userAvatar').textContent = currentUser.avatar;
-        }
-
-        // Открыть чат
-        function openChat(chatId) {
-            document.getElementById('mainScreen').classList.remove('active');
-            document.getElementById('chatScreen').classList.add('active');
-        }
-
-        // Закрыть чат
-        function closeChat() {
-            document.getElementById('chatScreen').classList.remove('active');
-            document.getElementById('mainScreen').classList.add('active');
-        }
-
-        // Отправка сообщения
+        // Message Handling
         function sendMessage() {
             const input = document.getElementById('messageInput');
             const content = input.value.trim();
 
             if (!content || !socket) return;
 
-            socket.emit('send_message', {
+            const messageData = {
                 content: content,
-                avatar: currentUser.avatar
-            });
+                rank: currentOperative.rank,
+                type: 'TEXT',
+                priority: currentPriority,
+                channel: currentChannel
+            };
 
+            socket.emit('send_message', messageData);
             input.value = '';
             input.style.height = 'auto';
             
-            // Останавливаем индикатор набора
             stopTyping();
         }
 
-        // Обработка ввода сообщения
-        document.getElementById('messageInput').addEventListener('input', function() {
-            // Авто-высота
-            this.style.height = 'auto';
-            this.style.height = Math.min(this.scrollHeight, 120) + 'px';
-
-            // Индикатор набора
-            if (!isTyping) {
-                isTyping = true;
-                socket.emit('typing_start');
-            }
-
-            clearTimeout(typingTimer);
-            typingTimer = setTimeout(() => {
-                stopTyping();
-            }, 1000);
-        });
-
-        function stopTyping() {
-            if (isTyping) {
-                isTyping = false;
-                socket.emit('typing_stop');
-            }
-        }
-
-        // Добавление сообщения в чат
         function addMessage(message) {
             const container = document.getElementById('messagesContainer');
             const messageDiv = document.createElement('div');
             
-            const isOutgoing = message.userId === currentUser.id;
-            messageDiv.className = `message ${isOutgoing ? 'outgoing' : 'incoming'}`;
-            
+            messageDiv.className = 'message';
+            if (message.priority === 'HIGH') messageDiv.classList.add('priority-high');
+            if (message.priority === 'CRITICAL') messageDiv.classList.add('priority-critical');
+            if (message.type === 'SYSTEM' || message.callsign === 'COMMAND') messageDiv.classList.add('command');
+
             const time = new Date(message.timestamp).toLocaleTimeString('ru-RU', {
                 hour: '2-digit',
                 minute: '2-digit'
             });
 
             messageDiv.innerHTML = `
+                <div class="message-header">
+                    <span class="message-callsign">${message.callsign} <span class="message-rank">${message.rank || ''}</span></span>
+                    <span class="message-time">${time}</span>
+                </div>
                 <div class="message-content">${message.content}</div>
-                <div class="message-time">${time}</div>
             `;
 
             container.appendChild(messageDiv);
             container.scrollTop = container.scrollHeight;
         }
 
-        // Отображение истории сообщений
         function displayMessages(messages) {
             const container = document.getElementById('messagesContainer');
             container.innerHTML = '';
-            
             messages.forEach(message => addMessage(message));
         }
 
-        // Обновление последнего сообщения
-        function updateLastMessage(message) {
-            document.getElementById('lastMessagePreview').textContent = 
-                `${message.username}: ${message.content}`;
-            document.getElementById('lastMessageTime').textContent = 
-                new Date(message.timestamp).toLocaleTimeString('ru-RU', {
-                    hour: '2-digit',
-                    minute: '2-digit'
+        // Tab Management
+        function showTab(tabName) {
+            document.querySelectorAll('.military-tab').forEach(tab => {
+                tab.classList.toggle('active', tab.textContent === getTabName(tabName));
+            });
+
+            document.querySelectorAll('.tab-content').forEach(content => {
+                content.classList.toggle('active', content.id === tabName + 'Tab');
+            });
+        }
+
+        function getTabName(tab) {
+            const names = {
+                'comms': 'COMMUNICATIONS',
+                'missions': 'MISSIONS', 
+                'equipment': 'EQUIPMENT',
+                'operatives': 'OPERATIVES'
+            };
+            return names[tab];
+        }
+
+        // Channel Management
+        function switchChannel(channel) {
+            currentChannel = channel;
+            document.querySelectorAll('.channel-btn').forEach(btn => {
+                btn.classList.toggle('active', btn.textContent === channel);
+            });
+            showAlert('SWITCHED TO ' + channel + ' CHANNEL', 'success');
+        }
+
+        // Priority Management
+        function setPriority(priority) {
+            currentPriority = priority;
+            document.querySelectorAll('.priority-btn').forEach(btn => {
+                btn.classList.toggle('active', btn.textContent === priority);
+            });
+        }
+
+        // Emergency Functions
+        function requestBackup() {
+            const reason = prompt('BACKUP REASON:');
+            if (reason) {
+                socket.emit('request_backup', {
+                    reason: reason,
+                    location: 'UNKNOWN'
                 });
+            }
         }
 
-        // Обновление счетчика онлайн
-        function updateOnlineCount(count) {
-            document.getElementById('userStatus').textContent = `Общий чат • ${count} онлайн`;
-            document.getElementById('chatStatus').textContent = `${count} участников онлайн`;
+        function sendEmergency() {
+            const message = prompt('EMERGENCY MESSAGE:');
+            if (message) {
+                socket.emit('send_message', {
+                    content: '🚨 EMERGENCY: ' + message,
+                    rank: currentOperative.rank,
+                    type: 'EMERGENCY',
+                    priority: 'CRITICAL',
+                    channel: 'GLOBAL'
+                });
+            }
         }
 
-        // Обновление индикатора набора
-        function updateTypingIndicator(typingUsers) {
+        // Typing Indicator
+        function setupEventListeners() {
+            const messageInput = document.getElementById('messageInput');
+            
+            messageInput.addEventListener('input', function() {
+                this.style.height = 'auto';
+                this.style.height = Math.min(this.scrollHeight, 120) + 'px';
+
+                if (!isTyping) {
+                    isTyping = true;
+                    socket.emit('start_typing');
+                }
+
+                clearTimeout(typingTimer);
+                typingTimer = setTimeout(() => {
+                    stopTyping();
+                }, 1000);
+            });
+
+            messageInput.addEventListener('keypress', function(e) {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
+                    sendMessage();
+                }
+            });
+        }
+
+        function stopTyping() {
+            if (isTyping) {
+                isTyping = false;
+                socket.emit('stop_typing');
+            }
+        }
+
+        function updateTypingIndicator(typingOps) {
             const indicator = document.getElementById('typingIndicator');
             
-            if (typingUsers.length > 0) {
-                const usernames = typingUsers.map(u => u.username).join(', ');
-                indicator.textContent = `${usernames} печатает...`;
+            if (typingOps.length > 0) {
+                const callsigns = typingOps.map(op => op.callsign).join(', ');
+                indicator.textContent = callsigns + ' IS TYPING...';
                 indicator.style.display = 'block';
             } else {
                 indicator.style.display = 'none';
             }
         }
 
-        // Смена темы
-        function toggleTheme() {
-            const isDark = document.body.getAttribute('data-theme') === 'dark';
-            document.body.setAttribute('data-theme', isDark ? 'light' : 'dark');
-            localStorage.setItem('mobeil_theme', isDark ? 'light' : 'dark');
+        // Missions Display
+        function displayMissions(missions) {
+            const container = document.getElementById('missionsGrid');
+            container.innerHTML = '';
+
+            missions.forEach(mission => {
+                const card = document.createElement('div');
+                card.className = 'mission-card';
+                if (mission.priority === 'HIGH') card.classList.add('priority-high');
+                if (mission.priority === 'CRITICAL') card.classList.add('priority-critical');
+
+                card.innerHTML = `
+                    <div class="mission-header">
+                        <div class="mission-codename">${mission.codename}</div>
+                        <div class="mission-status ${mission.status.toLowerCase()}">${mission.status}</div>
+                    </div>
+                    <div class="mission-details">${mission.objective}</div>
+                    <div class="mission-squad">
+                        <span>ASSIGNED: ${mission.squad}</span>
+                        <span>PRIORITY: ${mission.priority}</span>
+                    </div>
+                `;
+
+                container.appendChild(card);
+            });
         }
 
-        // Выход
-        function logout() {
-            if (confirm('Выйти из аккаунта?')) {
-                if (socket) {
-                    socket.disconnect();
-                }
-                currentUser = null;
-                document.getElementById('mainScreen').classList.remove('active');
-                document.getElementById('chatScreen').classList.remove('active');
-                document.getElementById('authScreen').classList.add('active');
-            }
+        // Equipment Display
+        function displayEquipment(equipment) {
+            const container = document.getElementById('equipmentList');
+            container.innerHTML = '';
+
+            equipment.forEach(item => {
+                const card = document.createElement('div');
+                card.className = 'equipment-card';
+
+                card.innerHTML = `
+                    <div class="equipment-name">${item.name}</div>
+                    <div class="equipment-status ${item.status.toLowerCase()}">${item.status}</div>
+                    <div class="equipment-type">TYPE: ${item.type}</div>
+                    <div class="equipment-assigned">UNIT: ${item.assignedTo}</div>
+                `;
+
+                container.appendChild(card);
+            });
         }
 
-        // Показать ошибку
-        function showError(elementId, message) {
-            const element = document.getElementById(elementId);
-            element.textContent = message;
-            element.style.display = 'block';
+        // Operatives Display
+        function updateOperatives(operatives) {
+            const container = document.getElementById('operativesGrid');
+            container.innerHTML = '';
+
+            operatives.forEach(op => {
+                const card = document.createElement('div');
+                card.className = 'operative-card online';
+
+                card.innerHTML = `
+                    <div class="operative-avatar">${op.avatar}</div>
+                    <div class="operative-callsign">${op.callsign}</div>
+                    <div class="operative-rank">${op.rank}</div>
+                    <div class="operative-unit">${op.unit}</div>
+                    <div class="operative-status">ONLINE</div>
+                `;
+
+                container.appendChild(card);
+            });
+        }
+
+        // Alert System
+        function showAlert(message, type) {
+            const alert = document.createElement('div');
+            alert.className = 'emergency-alert';
+            alert.style.background = type === 'success' ? 'var(--success)' : 
+                                  type === 'warning' ? 'var(--warning)' : 'var(--danger)';
+            alert.textContent = message;
+
+            document.body.appendChild(alert);
             setTimeout(() => {
-                element.style.display = 'none';
+                document.body.removeChild(alert);
             }, 3000);
         }
 
-        // Загрузка темы
-        function loadTheme() {
-            const savedTheme = localStorage.getItem('mobeil_theme') || 'light';
-            document.body.setAttribute('data-theme', savedTheme);
+        function showEmergencyAlert(alert) {
+            showAlert(alert.content, 'danger');
+            
+            // Add emergency message to chat
+            const container = document.getElementById('messagesContainer');
+            const messageDiv = document.createElement('div');
+            messageDiv.className = 'message priority-critical';
+            
+            const time = new Date(alert.timestamp).toLocaleTimeString('ru-RU', {
+                hour: '2-digit',
+                minute: '2-digit'
+            });
+
+            messageDiv.innerHTML = `
+                <div class="message-header">
+                    <span class="message-callsign">${alert.callsign} <span class="message-rank">EMERGENCY</span></span>
+                    <span class="message-time">${time}</span>
+                </div>
+                <div class="message-content">${alert.content}</div>
+            `;
+
+            container.appendChild(messageDiv);
+            container.scrollTop = container.scrollHeight;
         }
 
-        // Инициализация
-        document.addEventListener('DOMContentLoaded', function() {
-            loadTheme();
-            
-            // Enter для отправки сообщения
-            document.getElementById('messageInput').addEventListener('keypress', function(e) {
-                if (e.key === 'Enter' && !e.shiftKey) {
-                    e.preventDefault();
-                    sendMessage();
+        // Logout
+        function logout() {
+            if (confirm('CONFIRM LOGOUT?')) {
+                if (socket) {
+                    socket.disconnect();
                 }
-            });
+                currentOperative = null;
+                document.getElementById('mainScreen').classList.remove('active');
+                document.getElementById('authScreen').classList.add('active');
+                showAlert('LOGGED OUT - SYSTEM SECURE', 'success');
+            }
+        }
 
-            // Enter для форм авторизации
-            document.getElementById('loginPassword').addEventListener('keypress', function(e) {
-                if (e.key === 'Enter') login();
-            });
-            document.getElementById('registerPassword').addEventListener('keypress', function(e) {
-                if (e.key === 'Enter') register();
-            });
-        });
-
-        console.log('🚀 Mobeil Messenger загружен');
+        console.log('🎖️ LOCAL MESSENGER - MILITARY COMMS SYSTEM LOADED');
     </script>
 </body>
 </html>
